@@ -1,5 +1,5 @@
 from game_list import game_list
-from bggapi import fetch_games, fetch_games_expansions
+from bggapi import fetch_games, fetch_games_expansions, fetch_publisher
 from functools import reduce
 from utils import reduce_extend
 
@@ -31,9 +31,8 @@ def fill():
         reduce_extend,
         map(lambda g: g['publishers'], games)
     ))
-
-    # TODO: Get publishers
-
+    publishers = []
+    for id in publishers_id:
+        publishers.append(fetch_publisher(id))
+    
     expansions = fetch_games_expansions(games)
-
-    print(expansions)

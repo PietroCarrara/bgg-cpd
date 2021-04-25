@@ -1,6 +1,7 @@
 import xml.etree.ElementTree as xml
 import html
 import requests
+from bs4 import BeautifulSoup
 from functools import reduce
 from utils import reduce_extend, split
 
@@ -115,3 +116,17 @@ def fetch_games_expansions(games):
                 i += 1
 
     return res
+
+def fetch_publisher(publisher_id):
+
+    with requests.get(f'https://boardgamegeek.com/boardgamepublisher/{publisher_id}') as res:
+        doc = BeautifulSoup(res.content, 'html.parser')
+
+        name = html.unescape(doc.find('meta', {'name': 'title'}).attrs['content'])
+        desc = html.unescape(doc.find('meta', {'name': 'description'}).attrs['content'])
+
+        return {
+            'id': publisher_id,
+            'name': name,
+            'description': desc,
+        }
