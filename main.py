@@ -1,14 +1,5 @@
-from bggapi import fetch_games
-
-def unique(arr):
-    uniq = []
-
-    for i in arr:
-        if i in uniq:
-            continue
-        else:
-            uniq.append(i)
-            yield i
+from bggapi import fetch_games, split
+import db_fill
 
 if __name__ == '__main__':
-    print(fetch_games([217372, 217372+1]))
+    db_fill.fill()
