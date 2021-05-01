@@ -14,7 +14,7 @@ def fetch_games(all_ids):
     current_batch = 0
 
     # How many games to fetch in a single request
-    batch_size = 20
+    batch_size = 500
 
     # Number of comments we'll be fetching per request
     comments_per_page = 100
@@ -85,7 +85,7 @@ def fetch_games(all_ids):
                                     })
 
                                 if link_type == 'boardgamemechanic':
-                                    game['categories'].append({
+                                    game['mechanics'].append({
                                         'id': int(el.get('id')),
                                         'name': el.get('value'),
                                     })
@@ -93,7 +93,7 @@ def fetch_games(all_ids):
                                 if link_type == 'boardgameexpansion':
                                     game['expansions'].append({
                                         'id': int(el.get('id')),
-                                        'game': game['id'],
+                                        'game_id': game['id'],
                                     })
 
                                 if link_type == 'boardgamepublisher':
@@ -146,13 +146,13 @@ def fetch_games_expansions(games):
     current_batch = 0
 
     # How many games to fetch in a single request
-    batch_len = 20
+    batch_len = 500
 
     # Number of comments we'll be fetching per request
     comments_per_page = 100
 
     # Per game comment limit
-    comment_limit = 100
+    comment_limit = 200
 
     for exps in split(expansions, batch_len):
         page = 1
@@ -163,16 +163,14 @@ def fetch_games_expansions(games):
             
             ids = map(lambda e: e['id'], exps)
 
-            sla = f'https://api.geekdo.com/xmlapi2/thing?type=boardgameexpansion&id={",".join(map(str, ids))}&comments=1&pagesize={comments_per_page}&page={page}'
-
-            with requests.get(sla) as req:
+            with requests.get(f'https://api.geekdo.com/xmlapi2/thing?type=boardgameexpansion&id={",".join(map(str, ids))}&comments=1&pagesize={comments_per_page}&page={page}') as req:
                 i = 0
                 data = xml.fromstring(req.content)
 
                 for item in data:
                     if page == 1:
                         expansion = {
-                            'game': exps[i]['game'],
+                            'game_id': exps[i]['game_id'],
                             'id': exps[i]['id'],
                             'comments': [],
                         }
