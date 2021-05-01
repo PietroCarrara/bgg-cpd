@@ -1,4 +1,7 @@
 from math import floor
+from utils import split
+import os
+from .persistence import Uint32PairPersist
 
 # Inserts a value in the first empty space found,
 # or in the first position that would keep the array
@@ -59,7 +62,7 @@ class BTreeNode:
         for d in self.data:
             if d == None:
                 continue
-            print(f'{self.tree.get_key(d)} ', end='')
+            print(f'{d[0]}:{d[1]} ', end='')
         print()
 
         for child in self.children:
@@ -76,7 +79,7 @@ class BTreeNode:
             shift_insert(
                 self.data,
                 value,
-                lambda a, b: self.tree.get_key(a) > self.tree.get_key(b)
+                lambda a, b: a[0] > b[0]
             )
 
             if self.check_overflow():
@@ -90,7 +93,7 @@ class BTreeNode:
             return False
         else:
             # We're not a leaf node, so we have to insert to one of our subtrees
-            node = self.find_node_that_may_contain_key(self.tree.get_key(value))
+            node = self.find_node_that_may_contain_key(value[0])
 
             if node.insert(value, self):
                 # Our child modified us
@@ -105,7 +108,7 @@ class BTreeNode:
                         return True
 
             return False
-    
+
     # Returns a subnode where the provided key would be located
     def find_node_that_may_contain_key(self, key):
         if self.leaf:
@@ -118,15 +121,16 @@ class BTreeNode:
             if self.data[i] == None:
                 return self.children[i]
 
-
             # If we've found a key that is smaller than provided, we must
             # get down on the tree to the left of this element, so we stop.
-            if key < self.tree.get_key(self.data[i]):
+            if key < self.data[i][0]:
                 return self.children[i]
 
             # We won't even write code for the right-side path,
-            # because we allocated an extra position in the data,
-            # so we will actually 
+            # because we allocated an extra position in the data.
+            # In a normal btree, we would look at the right only when
+            # we hit the last spot. Since we have one more spot, we
+            # can afford to look only at the left
 
         raise Exception('This should never happen')
 
@@ -186,13 +190,46 @@ class BTreeNode:
         raise Exception(
             'Parent does not contain a link to us: it is not our actual parent!')
 
+    def get_data(self):
+        # [0:-1] to discard the extra slot that is allocated
+        return self.data[:-1]
+
+    # Returns all nodes of the tree, including null links
+    # (except for tree nodes, we don't return any of their children)
+    def bfs_with_nulls(self):
+        queue = [self]
+        discovered = [self]
+
+        while len(queue) > 0:
+            node = queue.pop(0)
+            yield node
+
+            if node == None:
+                continue
+
+            if not node.leaf:
+                # [0:-1] to discard the extra slot that is allocated
+                for child in node.children[0:-1]:
+                    if child == None:
+                        queue.append(child)
+                    elif child not in discovered:
+                        discovered.append(child)
+                        queue.append(child)
+
+    def __repr__(self):
+        data = []
+
+        for i in self.data:
+            if i != None:
+                data.append(f'{i[0]}:{i[1]}')
+
+        return '[' + ', '.join(data) + ']'
+
 
 class BTree:
-    def __init__(self, order, get_key):
+    def __init__(self, order):
         # Max number of children per node
         self.order = order
-        # Function to retreive a key for a specific data element
-        self.get_key = get_key
         # Root node
         self.root = BTreeNode(self)
 
@@ -201,5 +238,94 @@ class BTree:
         self.root.debug_display()
         print()
 
-    def insert(self, value):
-        self.root.insert(value)
+    def insert(self, key, value):
+        self.root.insert((key, value))
+
+    def bfs_with_nulls(self):
+        return self.root.bfs_with_nulls()
+
+
+class PersistentBTree:
+    # Stores a BTree in a file, representing it as an array:
+    # The n-th (0-based) child of the i-th (0-based) node is the
+    # order * i + n + 1 element of the array
+    def __init__(self, order, filename, persist):
+        self.filesize = os.path.getsize(filename)
+        self.order = order
+        self.persist = persist
+
+        mode = 'ab+' if os.path.exists(filename) else 'wb+'
+        self.file = open(filename, mode)
+
+    def dump(self, tree):
+        assert tree.order == self.order
+
+        # size of data point * number of data points
+        node_size = self.persist.data_size * (self.order - 1)
+
+        # Start at the begining (duh)
+        self.file.seek(0)
+
+        for node in tree.bfs_with_nulls():
+            if node == None:
+                self.file.write(self.persist.to_bytes(None) * (self.order - 1))
+            else:
+                for data_point in node.get_data():
+                    self.file.write(self.persist.to_bytes(data_point))
+
+        # Discard any leftover
+        self.file.truncate()
+
+    def find(self, key):
+        node_number = 0
+        node = self.load_node(0)
+
+        while node != None:
+            i = 0
+
+            for data in node:
+                # We have walked all the array and not found a single key
+                # greater than ours, dive to the rightmost child (which i points to)
+                if data == None:
+                    break
+
+                # If our key is smaller than one on this node, we must
+                # dive into the left child of it (which i points to)
+                if key < data[0]:
+                    break
+                
+                # Found the key
+                if data[0] == key:
+                    return data[1]
+
+                i += 1
+
+            node_number = self.child_of(node_number, i)
+            node = self.load_node(node_number)
+
+        return None
+        
+    def child_of(self, parent, child):
+        return self.order * parent + child + 1
+
+    # Loads the i-th (0-based) node of the tree
+    def load_node(self, i):
+        location = i * (self.persist.data_size * (self.order - 1))
+
+        if location >= self.filesize:
+            return None
+
+        self.file.seek(location)
+
+        bts = self.file.read(self.persist.data_size * (self.order - 1))
+
+        data = [self.persist.from_bytes(b) for b in split(bts, self.persist.data_size)]
+
+        # Check if there are no data points in this node
+        if data[0] == None:
+            return None
+
+        return data
+
+    def close(self):
+        self.file.close()
