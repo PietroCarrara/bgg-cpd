@@ -59,7 +59,8 @@ def fill():
                 'id': commentIndex,
                 'text': comment['text'],
                 'game_id': game['id'],
-                'expansion_id': 0,
+                'rating': comment['rating'],
+                'expansion_id': None,
             })
             commentIndex += 1
     for expansion in expansions:
@@ -68,7 +69,8 @@ def fill():
                 'id': commentIndex,
                 'text': comment['text'],
                 'expansion_id': expansion['id'],
-                'game_id': 0,
+                'rating': comment['rating'],
+                'game_id': None,
             })
             commentIndex += 1
 

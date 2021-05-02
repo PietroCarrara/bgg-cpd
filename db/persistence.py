@@ -302,6 +302,133 @@ class GamePersist:
 
         return game
 
+class PublisherPersist():
+    def __init__(self):
+        self.name_limit = 128
+        self.description_limit = 2048
+
+        self.data_size = 4 + self.name_limit + self.description_limit
+        self.pattern = f'I{self.name_limit}s{self.description_limit}s'
+
+    def to_bytes(self, publisher):
+        if publisher == None:
+            return bytes([0] * self.data_size)
+
+        return struct.pack(
+            self.pattern,
+            publisher['id'],
+            limit(publisher['name'], self.name_limit),
+            limit(publisher['description'], self.description_limit)
+        )
+
+    def from_bytes(self, arr):
+        assert len(arr) == self.data_size
+
+        # Check for empty value
+        if sum(arr) == 0:
+            return None
+
+        publisher = {}
+
+        publisher['id'], publisher['name'], publisher['description'] = struct.unpack(self.pattern, arr)
+
+        publisher['name'] = decode(publisher['name'])
+        publisher['description'] = decode(publisher['description'])
+
+        return publisher
+
+class CommentPersist():
+    def __init__(self):
+        self.text_limit = 512
+
+        self.data_size = 4 + self.text_limit + 4 + 4 * 2
+        self.pattern = f'I{self.text_limit}sfII'
+
+    def to_bytes(self, comment):
+        if comment == None:
+            return bytes([0] * self.data_size)
+
+        rating = comment['rating'] if comment['rating'] != None else 0
+
+        game_id = comment['game_id']
+        if game_id == None:
+            game_id = 0
+
+        expansion_id = comment['expansion_id']
+        if expansion_id == None:
+            expansion_id = 0
+
+        # Make sure its a valid comment
+        assert expansion_id != 0 or game_id != 0
+
+        return struct.pack(
+            self.pattern,
+            comment['id'],
+            limit(comment['text'], self.text_limit),
+            rating,
+            game_id,
+            expansion_id,
+        )
+
+    def from_bytes(self, arr):
+        assert len(arr) == self.data_size
+
+        # Check for empty value
+        if sum(arr) == 0:
+            return None
+
+        comment = {}
+
+        comment['id'], comment['text'], comment['rating'], comment['game_id'], comment['expansion_id'] = struct.unpack(self.pattern, arr)
+
+        comment['text'] = decode(comment['text'])
+        if comment['rating'] == 0:
+            comment['rating'] = None
+
+        if comment['game_id'] == 0:
+            comment['game_id'] = None
+
+        if comment['expansion_id'] == 0:
+            comment['expansion_id'] = None
+
+        return comment
+
+class ExpansionPersist():
+    def __init__(self):
+        self.name_limit = 128
+        self.description_limit = 4096
+
+        self.data_size = 4 + self.name_limit + self.description_limit + 4
+        self.pattern = f'I{self.name_limit}s{self.description_limit}sI'
+
+    def to_bytes(self, expansion):
+        if expansion == None:
+            return bytes([0] * self.data_size)
+
+        return struct.pack(
+            self.pattern,
+            expansion['id'],
+            limit(expansion['name'], self.name_limit),
+            limit(expansion['description'], self.description_limit),
+            expansion['year']
+        )
+
+    def from_bytes(self, arr):
+        assert len(arr) == self.data_size
+
+        # Check for empty value
+        if sum(arr) == 0:
+            return None
+
+        expansion = {}
+
+        expansion['id'], expansion['name'], expansion['description'], expansion['year'] = struct.unpack(self.pattern, arr)
+
+        expansion['name'] = decode(expansion['name'])
+        expansion['description'] = decode(expansion['description'])
+
+        return expansion
+
 
 class TagPersist():
     # Persists both categories and mechanics

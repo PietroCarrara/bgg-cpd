@@ -1,6 +1,7 @@
 import os
 from .btree import BTree, PersistentBTree
-from .persistence import TableFile, InvertedIndexFile, GamePersist, Uint32Persist, Uint32PairPersist, TagPersist
+from .persistence import TableFile, InvertedIndexFile, GamePersist, Uint32Persist, Uint32PairPersist, TagPersist, PublisherPersist, CommentPersist, ExpansionPersist
+
 
 class Database():
 
@@ -12,18 +13,41 @@ class Database():
         self.tables = {}
         self.postings = {}
 
-        self.trees['games'] = PersistentBTree(31, '.bgg/games.btree', Uint32PairPersist())
+        self.trees['games'] = PersistentBTree(
+            31, '.bgg/games.btree', Uint32PairPersist())
         self.tables['games'] = TableFile('.bgg/games.table', GamePersist())
 
-        self.trees['categories'] = PersistentBTree(15, '.bgg/categories.btree', Uint32PairPersist())
-        self.tables['categories'] = TableFile('.bgg/categories.table', TagPersist())
+        self.trees['categories'] = PersistentBTree(
+            15, '.bgg/categories.btree', Uint32PairPersist())
+        self.tables['categories'] = TableFile(
+            '.bgg/categories.table', TagPersist())
 
-        self.trees['mechanics'] = PersistentBTree(15, '.bgg/mechanics.btree', Uint32PairPersist())
-        self.tables['mechanics'] = TableFile('.bgg/mechanics.table', TagPersist())
+        self.trees['mechanics'] = PersistentBTree(
+            15, '.bgg/mechanics.btree', Uint32PairPersist())
+        self.tables['mechanics'] = TableFile(
+            '.bgg/mechanics.table', TagPersist())
 
-        self.tables['game_mechanic'] = TableFile('.bgg/game_mechanic.table', Uint32PairPersist())
-        self.postings['game_mechanic_mechanic'] = InvertedIndexFile('.bgg/game_mechanic_mechanic', make_hash(512), Uint32Persist(), Uint32Persist(), 16)
-        self.postings['game_mechanic_game'] = InvertedIndexFile('.bgg/game_mechanic_game', make_hash(512), Uint32Persist(), Uint32Persist(), 16)
+        self.trees['publishers'] = PersistentBTree(
+            15, '.bgg/publishers.btree', Uint32PairPersist())
+        self.tables['publishers'] = TableFile(
+            '.bgg/publishers.table', PublisherPersist())
+
+        self.trees['comments'] = PersistentBTree(
+            15, '.bgg/comments.btree', Uint32PairPersist())
+        self.tables['comments'] = TableFile(
+            '.bgg/comments.table', CommentPersist())
+
+        self.trees['expansions'] = PersistentBTree(
+            15, '.bgg/expansions.btree', Uint32PairPersist())
+        self.tables['expansions'] = TableFile(
+            '.bgg/expansions.table', ExpansionPersist())
+
+        self.tables['game_mechanic'] = TableFile(
+            '.bgg/game_mechanic.table', Uint32PairPersist())
+        self.postings['game_mechanic_mechanic'] = InvertedIndexFile(
+            '.bgg/game_mechanic_mechanic', make_hash(512), Uint32Persist(), Uint32Persist(), 16)
+        self.postings['game_mechanic_game'] = InvertedIndexFile(
+            '.bgg/game_mechanic_game', make_hash(512), Uint32Persist(), Uint32Persist(), 16)
 
     def initial_data(self,
                      games,
@@ -35,27 +59,13 @@ class Database():
                      game_mechanic,
                      game_category,
                      game_publisher):
-
-        games_ids = BTree(self.trees['games'].order)
-        self.tables['games'].delete()
-        for game in games:
-            index = self.tables['games'].insert(game)
-            games_ids.insert(game['id'], index)
-        self.trees['games'].dump(games_ids)
-
-        mechanics_ids = BTree(self.trees['mechanics'].order)
-        self.tables['mechanics'].delete()
-        for mechanic in mechanics:
-            index = self.tables['mechanics'].insert(mechanic)
-            mechanics_ids.insert(mechanic['id'], index)
-        self.trees['mechanics'].dump(mechanics_ids)
-
-        categories_ids = BTree(self.trees['categories'].order)
-        self.tables['categories'].delete()
-        for category in categories:
-            index = self.tables['categories'].insert(category)
-            categories_ids.insert(category['id'], index)
-        self.trees['categories'].dump(categories_ids)
+        # Create the base documents
+        self.make_document('games', games, 'id')
+        self.make_document('mechanics', mechanics, 'id')
+        self.make_document('categories', categories, 'id')
+        self.make_document('publishers', publishers, 'id')
+        self.make_document('comments', comments, 'id')
+        self.make_document('expansions', expansions, 'id')
 
         self.tables['game_mechanic'].delete()
         self.postings['game_mechanic_game'].delete()
@@ -64,6 +74,14 @@ class Database():
             index = self.tables['game_mechanic'].insert((game_id, mechanic_id))
             self.postings['game_mechanic_game'].insert(game_id, index)
             self.postings['game_mechanic_mechanic'].insert(mechanic_id, index)
+
+    def make_document(self, document, data, key):
+        ids = BTree(self.trees[document].order)
+        self.tables[document].delete()
+        for element in data:
+            index = self.tables[document].insert(element)
+            ids.insert(element[key], index)
+        self.trees[document].dump(ids)
 
     def get_by_key(self, table, key):
         index = self.trees[table].find(key)
@@ -90,6 +108,7 @@ class Database():
 
         for posting in self.postings:
             self.postings[posting].close()
+
 
 def make_hash(mod):
     return lambda x: abs(hash(x)) % mod
