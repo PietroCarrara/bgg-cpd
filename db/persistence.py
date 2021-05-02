@@ -101,6 +101,31 @@ class GamePersist:
 
         return game
 
+class TagPersist():
+    # Persists both categories and mechanics
+    def __init__(self):
+        self.name_limit = 32
+        self.data_size = 4 + self.name_limit
+        self.pattern = f'I{self.name_limit}s'
+
+    def to_bytes(self, tag):
+        if tag == None:
+            return bytes([0] * self.data_size)
+
+        return struct.pack(self.pattern, tag['id'], limit(tag['name'], self.name_limit))
+
+    def from_bytes(self, arr):
+        assert len(arr) == self.data_size
+
+        if (sum(arr)) == 0:
+            return None
+
+        tag = {}
+
+        tag['id'], tag['name'] = struct.unpack(self.pattern, arr)
+        tag['name'] = decode(tag['name'])
+
+        return tag
 
 def limit(string, max_size, encoding='utf-8'):
     string = list(string)

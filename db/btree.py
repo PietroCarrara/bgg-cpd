@@ -40,22 +40,22 @@ def shift_right(arr, start, insert=None):
 
 
 class BTreeNode:
-    def __init__(self, tree, data=[], children=[], leaf=True):
+    def __init__(self, tree, data=None, children=None, leaf=True):
         self.tree = tree
         self.leaf = leaf
 
         # Allocates one more node than needed, so we can easily check for overflows
-        self.children = children
-        for i in range((tree.order + 1) - len(children)):
+        self.children = children if children != None else []
+        for i in range((tree.order + 1) - len(self.children)):
             # Insert the rest of the slots
             self.children.append(None)
 
         # Allocates one more than needed, to we can easily check for overflows
         # (since number of children == order - 1)
-        self.data = data
-        for i in range(tree.order - len(data)):
+        self.data = data if data != None else []
+        for i in range(tree.order - len(self.data)):
             # Insert the rest of the slots
-            data.append(None)
+            self.data.append(None)
 
     def debug_display(self, level=0):
         print(f'Level {level}: ', end='')
