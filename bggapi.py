@@ -64,7 +64,7 @@ def fetch_games(all_ids):
                                 game['min_players'] = int(el.get('value'))
 
                             elif el.tag == 'maxplayers':
-                                game['min_players'] = int(el.get('value'))
+                                game['max_players'] = int(el.get('value'))
 
                             elif el.tag == 'minplaytime':
                                 game['min_playtime'] = int(el.get('value'))
