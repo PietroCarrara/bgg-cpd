@@ -34,7 +34,7 @@ def fetch_games(all_ids):
                 data = xml.fromstring(req.content)
 
                 for item in data:
-                    
+
                     if page == 1:
                         game = {
                             'id': int(item.get('id')),
@@ -137,7 +137,8 @@ def fetch_games(all_ids):
 def fetch_games_expansions(games):
     expansions = reduce(
         reduce_extend,
-        map(lambda g: g['expansions'], games)
+        map(lambda g: g['expansions'], games),
+        []
     )
 
     res = []
@@ -160,7 +161,7 @@ def fetch_games_expansions(games):
         while page > 0:
             # Tells if each expansion has had all of its comments fetch
             has_fetch_all_comments = [True] * batch_len
-            
+
             ids = map(lambda e: e['id'], exps)
 
             with requests.get(f'https://api.geekdo.com/xmlapi2/thing?type=boardgameexpansion&id={",".join(map(str, ids))}&comments=1&pagesize={comments_per_page}&page={page}') as req:
@@ -223,7 +224,7 @@ def fetch_games_expansions(games):
 
         # Next expansion batch
         current_batch += 1
-        
+
     return res
 
 

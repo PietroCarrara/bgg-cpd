@@ -1,6 +1,6 @@
 import os
 from .btree import BTree, PersistentBTree
-from .persistence import TableFile, GamePersist, Uint32PairPersist, TagPersist
+from .persistence import TableFile, InvertedIndexFile, GamePersist, Uint32Persist, Uint32PairPersist, TagPersist
 
 class Database():
 
@@ -10,6 +10,7 @@ class Database():
 
         self.trees = {}
         self.tables = {}
+        self.postings = {}
 
         self.trees['games'] = PersistentBTree(31, '.bgg/games.btree', Uint32PairPersist())
         self.tables['games'] = TableFile('.bgg/games.table', GamePersist())
@@ -19,6 +20,10 @@ class Database():
 
         self.trees['mechanics'] = PersistentBTree(15, '.bgg/mechanics.btree', Uint32PairPersist())
         self.tables['mechanics'] = TableFile('.bgg/mechanics.table', TagPersist())
+
+        self.tables['game_mechanic'] = TableFile('.bgg/game_mechanic.table', Uint32PairPersist())
+        self.postings['game_mechanic_mechanic'] = InvertedIndexFile('.bgg/game_mechanic_mechanic', make_hash(512), Uint32Persist(), Uint32Persist(), 16)
+        self.postings['game_mechanic_game'] = InvertedIndexFile('.bgg/game_mechanic_game', make_hash(512), Uint32Persist(), Uint32Persist(), 16)
 
     def initial_data(self,
                      games,
@@ -52,7 +57,15 @@ class Database():
             categories_ids.insert(category['id'], index)
         self.trees['categories'].dump(categories_ids)
 
-    def get_table_by_tree(self, table, key):
+        self.tables['game_mechanic'].delete()
+        self.postings['game_mechanic_game'].delete()
+        self.postings['game_mechanic_mechanic'].delete()
+        for game_id, mechanic_id in game_mechanic:
+            index = self.tables['game_mechanic'].insert((game_id, mechanic_id))
+            self.postings['game_mechanic_game'].insert(game_id, index)
+            self.postings['game_mechanic_mechanic'].insert(mechanic_id, index)
+
+    def get_by_key(self, table, key):
         index = self.trees[table].find(key)
 
         if index == None:
@@ -60,9 +73,23 @@ class Database():
 
         return self.tables[table].load(index)
 
+    def get_by_posting(self, posting, posting_key, key):
+        res = []
+
+        for index in self.postings[posting + '_' + posting_key].get_values(key):
+            res.append(self.tables[posting].load(index))
+
+        return res
+
     def close(self):
         for table in self.tables:
             self.tables[table].close()
 
         for tree in self.trees:
             self.trees[tree].close()
+
+        for posting in self.postings:
+            self.postings[posting].close()
+
+def make_hash(mod):
+    return lambda x: abs(hash(x)) % mod
