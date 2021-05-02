@@ -250,11 +250,16 @@ class PersistentBTree:
     # The n-th (0-based) child of the i-th (0-based) node is the
     # order * i + n + 1 element of the array
     def __init__(self, order, filename, persist):
-        self.filesize = os.path.getsize(filename)
         self.order = order
         self.persist = persist
 
-        mode = 'ab+' if os.path.exists(filename) else 'wb+'
+        if os.path.exists(filename):
+            mode = 'rb+'
+            self.filesize = os.path.getsize(filename)
+        else:
+            mode = 'wb+'
+            self.filesize = 0
+
         self.file = open(filename, mode)
 
     def dump(self, tree):
@@ -265,8 +270,10 @@ class PersistentBTree:
 
         # Start at the begining (duh)
         self.file.seek(0)
+        self.filesize = 0
 
         for node in tree.bfs_with_nulls():
+            self.filesize += node_size
             if node == None:
                 self.file.write(self.persist.to_bytes(None) * (self.order - 1))
             else:
