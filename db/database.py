@@ -63,6 +63,14 @@ class Database():
         self.postings['game_publisher_game'] = InvertedIndexFile(
             '.bgg/game_publisher_game', make_hash(512), Uint32Persist(), Uint32Persist(), 16)
 
+        self.postings['expansions_game'] = InvertedIndexFile(
+            '.bgg/expansions_game', make_hash(512), Uint32Persist(), Uint32Persist(), 16)
+
+        self.postings['comments_game'] = InvertedIndexFile(
+            '.bgg/comments_game', make_hash(512), Uint32Persist(), Uint32Persist(), 16)
+        self.postings['comments_expansion'] = InvertedIndexFile(
+            '.bgg/comments_expansion', make_hash(512), Uint32Persist(), Uint32Persist(), 16)
+
     def initial_data(self,
                      games,
                      mechanics,
@@ -73,30 +81,33 @@ class Database():
                      game_mechanic,
                      game_category,
                      game_publisher):
+        # Empty some indexes first
+        self.postings['expansions_game'].delete()
+        self.postings['comments_expansion'].delete()
+        self.postings['comments_game'].delete()
         # Create the base documents
         self.make_document('games', games, 'id')
         self.make_document('mechanics', mechanics, 'id')
         self.make_document('categories', categories, 'id')
         self.make_document('publishers', publishers, 'id')
-        self.make_document('comments', comments, 'id')
-        self.make_document('expansions', expansions, 'id')
+        self.make_document('comments', comments, 'id', self.comments_hook)
+        self.make_document('expansions', expansions, 'id', self.expansions_hook)
         # Create the N-N relations
         self.make_relation('game', 'mechanic', game_mechanic)
         self.make_relation('game', 'category', game_category)
         self.make_relation('game', 'publisher', game_publisher)
-        # Special indexes
-        # TODO: Create index on expansions
 
-
-    def make_document(self, document, data, key):
+    def make_document(self, document, data, key, hook=None):
         ids = BTree(self.trees[document].order)
         self.tables[document].delete()
         for element in data:
             index = self.tables[document].insert(element)
             ids.insert(element[key], index)
+            if hook != None:
+                hook(element, index)
         self.trees[document].dump(ids)
 
-    def make_relation(self, entity_a, entity_b, relation_data):
+    def make_relation(self, entity_a, entity_b, relation_data, hook=None):
         rel_name = entity_a + '_' + entity_b
 
         self.tables[rel_name].delete()
@@ -107,7 +118,19 @@ class Database():
             index = self.tables[rel_name].insert((data_a, data_b))
             self.postings[rel_name + '_' + entity_a].insert(data_a, index)
             self.postings[rel_name + '_' + entity_b].insert(data_b, index)
+            if hook != None:
+                hook(data_a, data_b, index)
 
+    def expansions_hook(self, expansion, index):
+        self.postings['expansions_game'].insert(expansion['game_id'], index)
+
+    def comments_hook(self, comment, index):
+        if comment['game_id'] != None:
+            self.postings['comments_game'].insert(comment['game_id'], index)
+        elif comment['expansion_id'] != None:
+            self.postings['comments_expansion'].insert(comment['expansion_id'], index)
+        else:
+            raise Exception('Invalid comment found!')
 
     def get_by_key(self, table, key):
         index = self.trees[table].find(key)
