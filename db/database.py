@@ -1,6 +1,8 @@
 import os
+import re
+from utils import tokenize
 from .btree import BTree, PersistentBTree
-from .persistence import TableFile, InvertedIndexFile, GamePersist, Uint32Persist, Uint32PairPersist, TagPersist, PublisherPersist, CommentPersist, ExpansionPersist
+from .persistence import TableFile, InvertedIndexFile, GamePersist, Uint32Persist, Uint32PairPersist, TagPersist, PublisherPersist, CommentPersist, ExpansionPersist, StringPersist
 
 
 class Database():
@@ -13,6 +15,7 @@ class Database():
         self.tables = {}
         self.postings = {}
 
+        # Base documents
         self.trees['games'] = PersistentBTree(
             31, '.bgg/games.btree', Uint32PairPersist())
         self.tables['games'] = TableFile('.bgg/games.table', GamePersist())
@@ -41,7 +44,7 @@ class Database():
             15, '.bgg/expansions.btree', Uint32PairPersist())
         self.tables['expansions'] = TableFile(
             '.bgg/expansions.table', ExpansionPersist())
-
+        # N-N Relations
         self.tables['game_mechanic'] = TableFile(
             '.bgg/game_mechanic.table', Uint32PairPersist())
         self.postings['game_mechanic_mechanic'] = InvertedIndexFile(
@@ -62,14 +65,24 @@ class Database():
             '.bgg/game_publisher_publisher', make_hash(512), Uint32Persist(), Uint32Persist(), 16)
         self.postings['game_publisher_game'] = InvertedIndexFile(
             '.bgg/game_publisher_game', make_hash(512), Uint32Persist(), Uint32Persist(), 16)
-
+        # Index to search for expansions by the game they expand
         self.postings['expansions_game'] = InvertedIndexFile(
             '.bgg/expansions_game', make_hash(512), Uint32Persist(), Uint32Persist(), 16)
-
+        # Indexes to search comments by the item they comment
         self.postings['comments_game'] = InvertedIndexFile(
             '.bgg/comments_game', make_hash(512), Uint32Persist(), Uint32Persist(), 16)
         self.postings['comments_expansion'] = InvertedIndexFile(
             '.bgg/comments_expansion', make_hash(512), Uint32Persist(), Uint32Persist(), 16)
+        # Indexes to search by text content
+        self.postings['games_word'] = InvertedIndexFile(
+            '.bgg/games_word', make_hash(1024), StringPersist(32), Uint32Persist(), 16)
+        self.postings['publishers_word'] = InvertedIndexFile(
+            '.bgg/publishers_word', make_hash(1024), StringPersist(32), Uint32Persist(), 16)
+        self.postings['mechanics_word'] = InvertedIndexFile(
+            '.bgg/mechanics_word', make_hash(1024), StringPersist(32), Uint32Persist(), 16)
+        self.postings['categories_word'] = InvertedIndexFile(
+            '.bgg/categories_word', make_hash(1024), StringPersist(32), Uint32Persist(), 16)
+
 
     def initial_data(self,
                      games,
@@ -82,14 +95,13 @@ class Database():
                      game_category,
                      game_publisher):
         # Empty some indexes first
-        self.postings['expansions_game'].delete()
-        self.postings['comments_expansion'].delete()
-        self.postings['comments_game'].delete()
+        for p in self.postings:
+            self.postings[p].delete()
         # Create the base documents
-        self.make_document('games', games, 'id')
-        self.make_document('mechanics', mechanics, 'id')
-        self.make_document('categories', categories, 'id')
-        self.make_document('publishers', publishers, 'id')
+        self.make_document('games', games, 'id', self.games_hook)
+        self.make_document('mechanics', mechanics, 'id', self.mechanics_hook)
+        self.make_document('categories', categories, 'id', self.categories_hook)
+        self.make_document('publishers', publishers, 'id', self.publishers_hook)
         self.make_document('comments', comments, 'id', self.comments_hook)
         self.make_document('expansions', expansions, 'id', self.expansions_hook)
         # Create the N-N relations
@@ -124,6 +136,18 @@ class Database():
     def expansions_hook(self, expansion, index):
         self.postings['expansions_game'].insert(expansion['game_id'], index)
 
+    def games_hook(self, game, index):
+        self.build_search_index('games', 'name', game, index)
+
+    def mechanics_hook(self, mechanic, index):
+        self.build_search_index('mechanics', 'name', mechanic, index)
+
+    def categories_hook(self, category, index):
+        self.build_search_index('categories', 'name', category, index)
+
+    def publishers_hook(self, publisher, index):
+        self.build_search_index('publishers', 'name', publisher, index)
+
     def comments_hook(self, comment, index):
         if comment['game_id'] != None:
             self.postings['comments_game'].insert(comment['game_id'], index)
@@ -131,6 +155,10 @@ class Database():
             self.postings['comments_expansion'].insert(comment['expansion_id'], index)
         else:
             raise Exception('Invalid comment found!')
+
+    def build_search_index(self, document, key, object, index):
+        for token in tokenize(object[key]):
+            self.postings[document + '_word'].insert(token, index)
 
     def get_by_key(self, table, key):
         index = self.trees[table].find(key)

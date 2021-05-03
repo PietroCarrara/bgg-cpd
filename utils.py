@@ -1,3 +1,7 @@
+import os
+import re
+from stop_words import stop_words
+
 def reduce_extend(a, b):
     a.extend(b)
     return a
@@ -7,3 +11,21 @@ def split(arr, length):
     while start < len(arr):
         yield arr[start:start+length]
         start += length
+
+def openfile(filename):
+    return open(filename, 'rb+' if os.path.exists(filename) else 'wb+')
+
+def tokenize(string):
+    string = string.lower()
+
+    string = re.sub('[áãà]', 'a', string)
+    string = re.sub('[é]', 'e', string)
+    string = re.sub('[í]', 'i', string)
+    string = re.sub('[ó]', 'o', string)
+    string = re.sub('[ú]', 'u', string)
+    string = re.sub('[ñ]', 'n', string)
+    string = re.sub('[^a-z ]', '', string)
+
+    res = string.split(' ')
+
+    return list(filter(lambda w: len(w) > 2 and w not in stop_words, res))

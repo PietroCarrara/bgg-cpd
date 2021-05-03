@@ -2,6 +2,7 @@ from math import floor
 from utils import split
 import os
 from .persistence import Uint32PairPersist
+from utils import openfile
 
 # Inserts a value in the first empty space found,
 # or in the first position that would keep the array
@@ -254,13 +255,11 @@ class PersistentBTree:
         self.persist = persist
 
         if os.path.exists(filename):
-            mode = 'rb+'
             self.filesize = os.path.getsize(filename)
         else:
-            mode = 'wb+'
             self.filesize = 0
 
-        self.file = open(filename, mode)
+        self.file = openfile(filename)
 
     def dump(self, tree):
         assert tree.order == self.order
@@ -300,7 +299,7 @@ class PersistentBTree:
                 # dive into the left child of it (which i points to)
                 if key < data[0]:
                     break
-                
+
                 # Found the key
                 if data[0] == key:
                     return data[1]
@@ -311,7 +310,7 @@ class PersistentBTree:
             node = self.load_node(node_number)
 
         return None
-        
+
     def child_of(self, parent, child):
         return self.order * parent + child + 1
 

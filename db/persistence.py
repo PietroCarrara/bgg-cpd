@@ -1,5 +1,6 @@
 import struct
 import os
+from utils import openfile
 
 class TableFile():
 
@@ -172,7 +173,7 @@ class InvertedIndexFile():
 
             return self.get_posting_values(index)
 
-        return None
+        return []
 
     def get_posting_values(self, index):
         res = []
@@ -456,6 +457,26 @@ class TagPersist():
 
         return tag
 
+class StringPersist():
+    def __init__(self, limit):
+        self.data_size = limit
+        self.pattern = f"f{limit}s"
+
+    def to_bytes(self, string):
+        arr = list(string.encode('utf-8'))
+
+        # Make sure it fits
+        assert len(arr) <= self.data_size
+        # Fill the remaining slots
+        for i in range(self.data_size - len(arr)):
+            arr.append(0)
+
+        return bytes(arr)
+
+    def from_bytes(self, arr):
+        assert len(arr) == self.data_size
+
+        return decode(arr)
 
 def limit(string, max_size, encoding='utf-8'):
     string = list(string)
@@ -476,6 +497,3 @@ def decode(bts, encoding='utf-8'):
         bts = bts[:index]
 
     return bts.decode(encoding)
-
-def openfile(filename):
-    return open(filename, 'rb+' if os.path.exists(filename) else 'wb+')
