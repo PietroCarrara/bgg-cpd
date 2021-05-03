@@ -49,6 +49,20 @@ class Database():
         self.postings['game_mechanic_game'] = InvertedIndexFile(
             '.bgg/game_mechanic_game', make_hash(512), Uint32Persist(), Uint32Persist(), 16)
 
+        self.tables['game_category'] = TableFile(
+            '.bgg/game_category.table', Uint32PairPersist())
+        self.postings['game_category_category'] = InvertedIndexFile(
+            '.bgg/game_category_category', make_hash(512), Uint32Persist(), Uint32Persist(), 16)
+        self.postings['game_category_game'] = InvertedIndexFile(
+            '.bgg/game_category_game', make_hash(512), Uint32Persist(), Uint32Persist(), 16)
+
+        self.tables['game_publisher'] = TableFile(
+            '.bgg/game_publisher.table', Uint32PairPersist())
+        self.postings['game_publisher_publisher'] = InvertedIndexFile(
+            '.bgg/game_publisher_publisher', make_hash(512), Uint32Persist(), Uint32Persist(), 16)
+        self.postings['game_publisher_game'] = InvertedIndexFile(
+            '.bgg/game_publisher_game', make_hash(512), Uint32Persist(), Uint32Persist(), 16)
+
     def initial_data(self,
                      games,
                      mechanics,
@@ -66,14 +80,13 @@ class Database():
         self.make_document('publishers', publishers, 'id')
         self.make_document('comments', comments, 'id')
         self.make_document('expansions', expansions, 'id')
+        # Create the N-N relations
+        self.make_relation('game', 'mechanic', game_mechanic)
+        self.make_relation('game', 'category', game_category)
+        self.make_relation('game', 'publisher', game_publisher)
+        # Special indexes
+        # TODO: Create index on expansions
 
-        self.tables['game_mechanic'].delete()
-        self.postings['game_mechanic_game'].delete()
-        self.postings['game_mechanic_mechanic'].delete()
-        for game_id, mechanic_id in game_mechanic:
-            index = self.tables['game_mechanic'].insert((game_id, mechanic_id))
-            self.postings['game_mechanic_game'].insert(game_id, index)
-            self.postings['game_mechanic_mechanic'].insert(mechanic_id, index)
 
     def make_document(self, document, data, key):
         ids = BTree(self.trees[document].order)
@@ -82,6 +95,19 @@ class Database():
             index = self.tables[document].insert(element)
             ids.insert(element[key], index)
         self.trees[document].dump(ids)
+
+    def make_relation(self, entity_a, entity_b, relation_data):
+        rel_name = entity_a + '_' + entity_b
+
+        self.tables[rel_name].delete()
+        self.postings[rel_name + '_' + entity_a].delete()
+        self.postings[rel_name + '_' + entity_b].delete()
+
+        for data_a, data_b in relation_data:
+            index = self.tables[rel_name].insert((data_a, data_b))
+            self.postings[rel_name + '_' + entity_a].insert(data_a, index)
+            self.postings[rel_name + '_' + entity_b].insert(data_b, index)
+
 
     def get_by_key(self, table, key):
         index = self.trees[table].find(key)
