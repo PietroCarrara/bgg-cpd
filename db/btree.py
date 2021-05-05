@@ -1,8 +1,7 @@
-from math import floor
-from utils import split
 import os
+from math import floor
+from utils import split, openfile
 from .persistence import Uint32PairPersist
-from utils import openfile
 
 # Inserts a value in the first empty space found,
 # or in the first position that would keep the array

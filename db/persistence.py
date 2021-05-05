@@ -34,17 +34,29 @@ class TableFile():
 
         return index
 
+    def count():
+        # Jump to the end
+        self.file.seek(0, 2)
+        # Count how many items do we have
+        total = int(self.file.tell() / self.persist.data_size)
+
+        # Assert it is an integer
+        assert self.file.tell() % self.persist.data_size == 0
+
+        return total
+
     def close(self):
         self.file.close()
 
 class InvertedIndexFile():
-    def __init__(self, filename, hash_key, key_persist, value_persist, block_size):
+    def __init__(self, filename, hash_key, key_persist, value_persist, block_size, allow_duplicates = False):
         self.hash_key = hash_key
         self.value_file = openfile(filename + '.dictionary')
         self.key_file = openfile(filename + '.posting')
         self.key_persist = key_persist
         self.value_persist = value_persist
         self.block_size = block_size
+        self.allow_duplicates = allow_duplicates
 
     def insert(self, key, value):
         position = self.hash_key(key)
@@ -118,6 +130,9 @@ class InvertedIndexFile():
                     # Go back to the start of this slot and save the value
                     self.value_file.seek(-self.value_persist.data_size, 1)
                     self.value_file.write(self.value_persist.to_bytes(value))
+                    return
+
+                elif not self.allow_duplicates and v == value:
                     return
 
             # We have read the entire block and found no free slots,

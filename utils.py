@@ -18,6 +18,10 @@ def openfile(filename):
 def tokenize(string):
     string = string.lower()
 
+    # Remove links and newlines
+    string = re.sub('(http|ftp|https):\/\/([\w_-]+(?:(?:\.[\w_-]+)+))([\w.,@?^=%&:\/~+#-]*[\w@?^=%&\/~+#-])?', ' ', string)
+    string = re.sub('\\n', ' ', string)
+
     string = re.sub('[áãà]', 'a', string)
     string = re.sub('[é]', 'e', string)
     string = re.sub('[í]', 'i', string)
