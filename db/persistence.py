@@ -234,8 +234,11 @@ class Uint32Persist:
         # We can't represent this value
         assert number != 4294967295
 
-        if number == None:
+        if number == 0:
             number = 4294967295
+
+        if number == None:
+            number = 0
 
         return struct.pack(self.pattern, number)
 
@@ -245,6 +248,9 @@ class Uint32Persist:
         number = struct.unpack(self.pattern, arr)[0]
 
         if number == 4294967295:
+            return 0
+
+        if number == 0:
             return None
 
         return number
@@ -478,6 +484,12 @@ class StringPersist():
         self.pattern = f"f{limit}s"
 
     def to_bytes(self, string):
+        # Can't represent this value
+        assert string != ''
+
+        if string == None:
+            return bytes([0] * self.data_size)
+
         arr = list(string.encode('utf-8'))
 
         # Make sure it fits
@@ -491,7 +503,12 @@ class StringPersist():
     def from_bytes(self, arr):
         assert len(arr) == self.data_size
 
-        return decode(arr)
+        res = decode(arr)
+
+        if res == '':
+            return None
+
+        return res
 
 def limit(string, max_size, encoding='utf-8'):
     string = list(string)

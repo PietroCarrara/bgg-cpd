@@ -253,12 +253,10 @@ class PersistentBTree:
         self.order = order
         self.persist = persist
 
-        if os.path.exists(filename):
-            self.filesize = os.path.getsize(filename)
-        else:
-            self.filesize = 0
-
         self.file = openfile(filename)
+        self.file.seek(0, 2)
+        self.filesize = self.file.tell()
+
 
     def dump(self, tree):
         assert tree.order == self.order
