@@ -6,6 +6,12 @@ def reduce_extend(a, b):
     a.extend(b)
     return a
 
+def reduce_intersection(a, b):
+    b = list(b)
+    for el in a:
+        if el in b:
+            yield el
+
 def split(arr, length):
     start = 0
     while start < len(arr):
