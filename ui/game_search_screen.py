@@ -3,6 +3,7 @@ from .list_item import ListItem
 from db.db import connect
 from functools import reduce
 from utils import tokenize, reduce_intersection
+from .game_info_screen import GameInfoScreen
 
 class GameSearchScreen():
 
@@ -28,6 +29,8 @@ class GameSearchScreen():
 
         self.categories_result.add_key_command(py_cui.keys.KEY_ENTER, self.select_category)
         self.mechanics_result.add_key_command(py_cui.keys.KEY_ENTER, self.select_mechanic)
+
+        self.result_list.add_key_command(py_cui.keys.KEY_ENTER, self.select_result)
 
         self.current_filter = self.root.add_block_label('Current Filters 📝', 1, 0, column_span=2, center=False)
 
@@ -97,6 +100,7 @@ class GameSearchScreen():
             self.result_list.add_item('No items found!')
             return
 
+        self.ui.move_focus(self.result_list)
         for game_id in ids:
             game = db.get_by_key('games', game_id)
 
@@ -154,6 +158,14 @@ class GameSearchScreen():
 
         self.update_filters_text()
         self.search()
+
+    def select_result(self):
+        game = self.result_list.get()
+        if game == None:
+            return
+
+        screen = GameInfoScreen(self.ui, game.value)
+        screen.apply()
 
     def apply(self):
         self.ui.apply_widget_set(self.root)
