@@ -1,5 +1,6 @@
 import os
 import re
+from hashlib import md5
 from utils import tokenize
 from .btree import BTree, PersistentBTree
 from .persistence import TableFile, InvertedIndexFile, GamePersist, Uint32Persist, Uint32PairPersist, TagPersist, PublisherPersist, CommentPersist, ExpansionPersist, StringPersist
@@ -75,13 +76,13 @@ class Database():
             '.bgg/comments_expansion', make_hash(512), Uint32Persist(), Uint32Persist(), 16)
         # Indexes to search by text content
         self.postings['games_word'] = InvertedIndexFile(
-            '.bgg/games_word', make_hash(1024), StringPersist(32), Uint32Persist(), 16)
+            '.bgg/games_word', make_hash(1024), StringPersist(40), Uint32Persist(), 16)
         self.postings['publishers_word'] = InvertedIndexFile(
-            '.bgg/publishers_word', make_hash(1024), StringPersist(32), Uint32Persist(), 16)
+            '.bgg/publishers_word', make_hash(1024), StringPersist(40), Uint32Persist(), 16)
         self.postings['mechanics_word'] = InvertedIndexFile(
-            '.bgg/mechanics_word', make_hash(1024), StringPersist(32), Uint32Persist(), 16)
+            '.bgg/mechanics_word', make_hash(1024), StringPersist(40), Uint32Persist(), 16)
         self.postings['categories_word'] = InvertedIndexFile(
-            '.bgg/categories_word', make_hash(1024), StringPersist(32), Uint32Persist(), 16)
+            '.bgg/categories_word', make_hash(1024), StringPersist(40), Uint32Persist(), 16)
 
 
     def initial_data(self,
@@ -190,4 +191,4 @@ class Database():
 
 
 def make_hash(mod):
-    return lambda x: abs(hash(x)) % mod
+    return lambda x: int(md5(bytes(str(x), 'utf-8')).hexdigest(), 16) % mod
