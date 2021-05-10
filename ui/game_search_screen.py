@@ -3,7 +3,7 @@ import ui.game_info_screen as gis
 from .list_item import ListItem
 from db.db import connect
 from functools import reduce
-from utils import tokenize, reduce_intersection
+from utils import tokenize, intersect, reduce_intersection
 from .ui import ui_push
 
 class GameSearchScreen():
@@ -170,17 +170,8 @@ class GameSearchScreen():
     def apply(self):
         self.ui.set_title('Search Games')
         self.ui.apply_widget_set(self.root)
+        self.ui.move_focus(self.search_box)
         self.search()
-
-
-def intersect(a, b):
-    if a == None:
-        return b
-
-    if b == None:
-        return a
-
-    return reduce(reduce_intersection, [a, b])
 
 def is_in(arr, item):
     for i in arr:

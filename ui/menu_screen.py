@@ -1,5 +1,6 @@
 import py_cui
 import ui.game_search_screen as gsc
+import ui.publisher_search_screen as psc
 from .ui import ui_push
 
 class MenuScreen:
@@ -7,7 +8,7 @@ class MenuScreen:
         self.ui = ui
         self.root = ui.create_new_widget_set(3, 3)
 
-        self.menu = self.root.add_scroll_menu('Operation Selection', 0, 0, row_span=3, column_span=3)
+        self.menu = self.root.add_scroll_menu('Operation Selection', 1, 1)
         self.menu.add_item_list([
             '1. Search Games',
             '2. Search Publishers',
@@ -24,3 +25,6 @@ class MenuScreen:
 
         if option == 0:
             ui_push(self.ui, gsc.GameSearchScreen(self.ui))
+
+        elif option == 1:
+            ui_push(self.ui, psc.PublisherSearchScreen(self.ui))

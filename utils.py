@@ -1,6 +1,7 @@
 import os
 import re
 from stop_words import stop_words
+from functools import reduce
 
 def unique(arr):
     uniq = []
@@ -11,6 +12,15 @@ def unique(arr):
         else:
             uniq.append(i)
             yield i
+
+def intersect(a, b):
+    if a == None:
+        return b
+
+    if b == None:
+        return a
+
+    return reduce(reduce_intersection, [a, b])
 
 def reduce_extend(a, b):
     a.extend(b)

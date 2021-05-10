@@ -18,13 +18,20 @@ class GameInfoScreen:
         self.root.add_text_block('Information', 0, 0, initial_text=self.info_text())
         self.root.add_text_block('Description', 1, 0, row_span=2, column_span=2, initial_text=game['description'])
 
-        self.expansions = self.root.add_scroll_menu('Expansions', 0, 1, column_span=2)
+        self.publishers = self.root.add_scroll_menu('Publishers', 0, 1)
+        self.expansions = self.root.add_scroll_menu('Expansions', 0, 2)
         self.categories = self.root.add_scroll_menu('Categories', 1, 2)
         self.mechanics = self.root.add_scroll_menu('Mechanics', 2, 2)
 
+        # TODO: self.publishers.add_key_command(py_cui.keys.KEY_ENTER, self.select_publisher)
         self.expansions.add_key_command(py_cui.keys.KEY_ENTER, self.select_expansion)
         self.categories.add_key_command(py_cui.keys.KEY_ENTER, self.select_category)
         self.mechanics.add_key_command(py_cui.keys.KEY_ENTER, self.select_mechanic)
+
+        for _, pub_id in db.get_by_posting('game_publisher', 'game', self.id):
+            publisher = db.get_by_key('publishers', pub_id)
+            item = ListItem(publisher, publisher['name'])
+            self.publishers.add_item(item)
 
         for _, cat_id in db.get_by_posting('game_category', 'game', self.id):
             category = db.get_by_key('categories', cat_id)
