@@ -1,16 +1,16 @@
 import py_cui
+import ui.game_info_screen as gis
 from .list_item import ListItem
 from db.db import connect
 from functools import reduce
 from utils import tokenize, reduce_intersection
-from .game_info_screen import GameInfoScreen
 from .ui import ui_push
 
 class GameSearchScreen():
 
-    def __init__(self, ui: py_cui.PyCUI):
-        self.categories = []
-        self.mechanics = []
+    def __init__(self, ui: py_cui.PyCUI, mechanics = None, categories = None):
+        self.categories = categories or []
+        self.mechanics = mechanics or []
 
         self.ui = ui
         self.root = ui.create_new_widget_set(3, 3)
@@ -165,10 +165,13 @@ class GameSearchScreen():
         if game == None:
             return
 
-        ui_push(self.ui, GameInfoScreen(self.ui, game.value), f"{game.value['name']} (#{game.value['id']})")
+        ui_push(self.ui, gis.GameInfoScreen(self.ui, game.value))
 
     def apply(self):
+        self.ui.set_title('Search Games')
         self.ui.apply_widget_set(self.root)
+        self.search()
+
 
 def intersect(a, b):
     if a == None:

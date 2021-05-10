@@ -1,6 +1,6 @@
 import py_cui
+import ui.game_search_screen as gsc
 from .ui import ui_push
-from .game_search_screen import GameSearchScreen
 
 class MenuScreen:
     def __init__(self, ui: py_cui.PyCUI):
@@ -15,6 +15,7 @@ class MenuScreen:
         self.menu.add_key_command(py_cui.keys.KEY_ENTER, self.select_operation)
 
     def apply(self):
+        self.ui.set_title('BoardGameGeek')
         self.ui.apply_widget_set(self.root)
         self.ui.move_focus(self.menu)
 
@@ -22,4 +23,4 @@ class MenuScreen:
         option = self.menu.get_selected_item_index()
 
         if option == 0:
-            ui_push(self.ui, GameSearchScreen(self.ui), 'Search Games')
+            ui_push(self.ui, gsc.GameSearchScreen(self.ui))

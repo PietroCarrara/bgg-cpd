@@ -1,6 +1,8 @@
 import py_cui
+import ui.game_search_screen as gsc
 from .list_item import ListItem
 from db.db import connect
+from .ui import ui_push
 
 class GameInfoScreen:
 
@@ -20,15 +22,18 @@ class GameInfoScreen:
         self.categories = self.root.add_scroll_menu('Categories', 1, 2)
         self.mechanics = self.root.add_scroll_menu('Mechanics', 2, 2)
 
+        self.expansions.add_key_command(py_cui.keys.KEY_ENTER, self.select_expansion)
+        self.categories.add_key_command(py_cui.keys.KEY_ENTER, self.select_category)
+        self.mechanics.add_key_command(py_cui.keys.KEY_ENTER, self.select_mechanic)
 
         for _, cat_id in db.get_by_posting('game_category', 'game', self.id):
             category = db.get_by_key('categories', cat_id)
-            item = ListItem(category, category['name'])
+            item = ListItem(category['id'], category['name'])
             self.categories.add_item(item)
 
         for _, mech_id in db.get_by_posting('game_mechanic', 'game', self.id):
             mechanic = db.get_by_key('mechanics', mech_id)
-            item = ListItem(mechanic, mechanic['name'])
+            item = ListItem(mechanic['id'], mechanic['name'])
             self.mechanics.add_item(item)
 
         for expansion in db.get_by_posting('expansions', 'game', self.id):
@@ -66,7 +71,6 @@ Playtime:
 
         exp = exp.value
 
-        # TODO: Switch to expansion screen
 
     def select_category(self):
         cat = self.categories.get()
@@ -74,9 +78,7 @@ Playtime:
         if cat == None:
             return
 
-        cat = cat.value
-
-        # TODO: Switch to search screen
+        ui_push(self.ui, gsc.GameSearchScreen(self.ui, categories = [cat]))
 
     def select_mechanic(self):
         mech = self.mechanics.get()
@@ -84,10 +86,9 @@ Playtime:
         if mech == None:
             return
 
-        mech = mech.value
-
-        # TODO: Switch to search screen
+        ui_push(self.ui, gsc.GameSearchScreen(self.ui, mechanics = [mech]))
 
 
     def apply(self):
+        self.ui.set_title(f"{self.game['name']} (#{self.id})")
         self.ui.apply_widget_set(self.root)
