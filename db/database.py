@@ -153,8 +153,7 @@ class Database():
         self.build_search_index('categories', 'name', category, index)
 
     def publishers_hook(self, publisher, index):
-        self.build_search_index('publishers', 'name', publisher, index)
-        self.build_search_index('publishers', 'description', publisher, index)
+        self.build_search_index('publishers', ['name', 'description'], publisher, index)
 
     def comments_hook(self, comment, index):
         if comment['game_id'] != None:
