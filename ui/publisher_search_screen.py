@@ -1,4 +1,6 @@
 import py_cui
+import ui.publisher_info_screen as pis
+from ui.ui import ui_push
 from db.db import connect
 from utils import tokenize, intersect
 from .list_item import ListItem
@@ -12,6 +14,7 @@ class PublisherSearchScreen:
         self.results = self.root.add_scroll_menu('Results 🕮', 1, 1, row_span=2)
 
         self.search_bar.add_key_command(py_cui.keys.KEY_ENTER, self.search)
+        self.results.add_key_command(py_cui.keys.KEY_ENTER, self.select_publisher)
 
     def search(self):
         self.results.clear()
@@ -45,6 +48,15 @@ class PublisherSearchScreen:
             self.results.add_item(item)
 
         self.ui.move_focus(self.results)
+
+    def select_publisher(self):
+        publisher = self.results.get()
+
+        if publisher == None:
+            return
+
+        ui_push(self.ui, pis.PublisherInfoScreen(self.ui, publisher.value))
+
 
     def apply(self):
         self.ui.set_title('Search Publishers')

@@ -1,5 +1,6 @@
 import py_cui
 import ui.game_search_screen as gsc
+import ui.publisher_info_screen as pis
 from .list_item import ListItem
 from db.db import connect
 from .ui import ui_push
@@ -23,7 +24,7 @@ class GameInfoScreen:
         self.categories = self.root.add_scroll_menu('Categories', 1, 2)
         self.mechanics = self.root.add_scroll_menu('Mechanics', 2, 2)
 
-        # TODO: self.publishers.add_key_command(py_cui.keys.KEY_ENTER, self.select_publisher)
+        self.publishers.add_key_command(py_cui.keys.KEY_ENTER, self.select_publisher)
         self.expansions.add_key_command(py_cui.keys.KEY_ENTER, self.select_expansion)
         self.categories.add_key_command(py_cui.keys.KEY_ENTER, self.select_category)
         self.mechanics.add_key_command(py_cui.keys.KEY_ENTER, self.select_mechanic)
@@ -94,6 +95,15 @@ Playtime:
             return
 
         ui_push(self.ui, gsc.GameSearchScreen(self.ui, mechanics = [mech]))
+
+
+    def select_publisher(self):
+        pub = self.publishers.get()
+
+        if pub == None:
+            return
+
+        ui_push(self.ui, pis.PublisherInfoScreen(self.ui, pub.value))
 
 
     def apply(self):
