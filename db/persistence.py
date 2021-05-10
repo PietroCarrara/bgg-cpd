@@ -49,19 +49,27 @@ class TableFile():
         self.file.close()
 
 class InvertedIndexFile():
-    def __init__(self, filename, hash_key, key_persist, value_persist, block_size, allow_duplicates = False):
+    def __init__(self, filename, hash_key, key_persist, value_persist, block_size):
         self.hash_key = hash_key
         self.value_file = openfile(filename + '.dictionary')
         self.key_file = openfile(filename + '.posting')
         self.key_persist = key_persist
         self.value_persist = value_persist
         self.block_size = block_size
-        self.allow_duplicates = allow_duplicates
+        self.index_cache = {}
+        self.insert_index_cache = {}
 
     def insert(self, key, value):
-        position = self.hash_key(key)
+        # Check if key already exists
+        if key in self.index_cache:
+            index = self.index_cache[key]
+            if key in self.insert_index_cache:
+                index = self.insert_index_cache[key]
+            self.insert_value_old(key, value, index)
+            return
 
-        file_position = position * (self.key_persist.data_size + 4)
+        # Locate key spot
+        file_position = self.hash_key(key) * (self.key_persist.data_size + 4)
 
         while True:
             self.key_file.seek(file_position)
@@ -71,32 +79,29 @@ class InvertedIndexFile():
                 # Got to the end of the file and have not yet found our key.
                 # Insert it here
                 self.key_file.write(self.key_persist.to_bytes(key))
-                value_index = self.insert_value_new(value)
+                value_index = self.insert_value_new(key, value)
 
                 self.key_file.write(struct.pack('I', value_index))
+                self.index_cache[key] = value_index
                 break
             else:
-                # Check if we found our key, or if this slot is empty
+                # Check if this slot is empty
                 file_key = self.key_persist.from_bytes(arr)
 
-                if file_key == key:
-                    # Found our key, write the value on it's list
-                    index = struct.unpack('I', self.key_file.read(4))[0]
-                    self.insert_value_old(value, index)
-                    break
-                elif file_key == None:
+                if file_key == None:
                     # Our slot is empty, write the key here
                     self.key_file.seek(file_position)
                     self.key_file.write(self.key_persist.to_bytes(key))
-                    value_index = self.insert_value_new(value)
+                    value_index = self.insert_value_new(key, value)
 
                     self.key_file.write(struct.pack('I', value_index))
+                    self.index_cache[key] = value_index
                     break
 
             file_position += self.key_persist.data_size + 4
 
     # Inserts a new value into the values file
-    def insert_value_new(self, value):
+    def insert_value_new(self, key, value):
         # Go to the end
         self.value_file.seek(0, 2)
         # Save the new list index
@@ -104,6 +109,9 @@ class InvertedIndexFile():
 
         # Make sure we got a valid index
         assert self.value_file.tell() % (self.value_persist.data_size * self.block_size + 4) == 0
+
+        # Cache this block's location
+        self.insert_index_cache[key] = index
 
         # Save the value
         self.value_file.write(self.value_persist.to_bytes(value))
@@ -117,7 +125,7 @@ class InvertedIndexFile():
 
         return index
 
-    def insert_value_old(self, value, index):
+    def insert_value_old(self, key, value, index):
 
         while True:
             # Go to the start of the list
@@ -130,9 +138,8 @@ class InvertedIndexFile():
                     # Go back to the start of this slot and save the value
                     self.value_file.seek(-self.value_persist.data_size, 1)
                     self.value_file.write(self.value_persist.to_bytes(value))
-                    return
-
-                elif not self.allow_duplicates and v == value:
+                    # Cache this block's location
+                    self.insert_index_cache[key] = index
                     return
 
             # We have read the entire block and found no free slots,
@@ -145,18 +152,20 @@ class InvertedIndexFile():
                 # Save the location of the link to the next block
                 location = self.value_file.tell() - 4
                 # Write the link to the new block
-                index = self.insert_value_new(value)
+                index = self.insert_value_new(key, value)
                 self.value_file.seek(location)
                 self.value_file.write(struct.pack('I', index))
+
                 return
 
-    # Returns (position, found), where position is the byte of the
-    # file where the key is located (-1 if we've hit the end of the file while searching),
-    # and found is True when we've found the key, False otherwise
+    # Returns the index a key points to. -1 when key not found
     def find_key(self, key):
-        position = self.hash_key(key)
+        # Try to find it in the cache
+        if key in self.index_cache:
+            return self.index_cache[key]
 
-        file_position = position * (self.key_persist.data_size + 4)
+        # Locate the key in the file
+        file_position = self.hash_key(key) * (self.key_persist.data_size + 4)
 
         while True:
             self.key_file.seek(file_position)
@@ -164,28 +173,26 @@ class InvertedIndexFile():
 
             if len(arr) == 0:
                 # Got to the end of the file and have not yet found the key.
-                return -1, False
+                return -1
             else:
                 # Check if we found our key, or if this slot is empty
                 file_key = self.key_persist.from_bytes(arr)
 
                 if file_key == key:
                     # Found our key
-                    return (file_position, True)
+                    index = struct.unpack('I', self.key_file.read(4))[0]
+                    self.index_cache[key] = index
+                    return index
                 elif file_key == None:
                     # Empty slot, the key is not on this file
-                    return (file_position, False)
+                    return -1
 
             file_position += self.key_persist.data_size + 4
 
     def get_values(self, key):
-        location, found = self.find_key(key)
+        index = self.find_key(key)
 
-        if found:
-            # Read the posting index
-            self.key_file.seek(location + self.key_persist.data_size)
-            index = struct.unpack('I', self.key_file.read(4))[0]
-
+        if index >= 0:
             return self.get_posting_values(index)
 
         return []
@@ -219,6 +226,8 @@ class InvertedIndexFile():
         self.value_file.truncate()
         self.key_file.seek(0)
         self.key_file.truncate()
+        self.index_cache = {}
+        self.insert_index_cache = {}
 
     def close(self):
         self.value_file.close()

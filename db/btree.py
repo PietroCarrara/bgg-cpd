@@ -7,36 +7,39 @@ from .persistence import Uint32PairPersist
 # or in the first position that would keep the array
 # ordered from smallest to greatest
 def shift_insert(arr, insert_value, greater_than, position=0):
-    if position >= len(arr):
-        raise Exception('Tried inserting into full array')
 
-    if arr[position] == None:
-        arr[position] = insert_value
-        return
+    while position < len(arr):
+        if arr[position] == None:
+            arr[position] = insert_value
+            return
 
-    if greater_than(arr[position], insert_value):
-        val = arr[position]
-        arr[position] = insert_value
+        if greater_than(arr[position], insert_value):
+            val = arr[position]
+            arr[position] = insert_value
 
-        # Shift everyone one position to the right
-        shift_right(arr, position + 1, val)
+            shift_right(arr, position + 1, val)
 
-        return
+            return
 
-    shift_insert(arr, insert_value, greater_than, position + 1)
+        position += 1
 
 # Shifts an array one slot the right, starting at `start`
 def shift_right(arr, start, insert=None):
-    if start >= len(arr):
-        # Make sure we are not throwing out some important value
-        assert insert == None
 
-        return
+    while start < len(arr):
+        tmp = arr[start]
+        arr[start] = insert
+        insert = tmp
 
-    tmp = arr[start]
-    arr[start] = insert
+        # This optimization will fail if the array we've
+        # received has elements after a None slot
+        if tmp == None:
+            break
 
-    return shift_right(arr, start + 1, tmp)
+        start += 1
+
+    # Make sure we're not discarding any items
+    assert insert == None
 
 
 class BTreeNode:
@@ -136,7 +139,11 @@ class BTreeNode:
 
     # Returns whether there is a overflow or not
     def check_overflow(self):
-        return sum(map(lambda x: x != None, self.data)) == len(self.data)
+        for data in self.data:
+            if data == None:
+                return False
+
+        return True
 
     # Splits and returns the (left_subtree, middle_element, right_subtree)
     # Also marks this node as not being a leaf anymore

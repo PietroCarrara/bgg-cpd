@@ -2,6 +2,16 @@ import os
 import re
 from stop_words import stop_words
 
+def unique(arr):
+    uniq = []
+
+    for i in arr:
+        if i in uniq:
+            continue
+        else:
+            uniq.append(i)
+            yield i
+
 def reduce_extend(a, b):
     a.extend(b)
     return a
@@ -38,4 +48,4 @@ def tokenize(string):
 
     res = string.split(' ')
 
-    return list(filter(lambda w: len(w) > 2 and w not in stop_words, res))
+    return list(unique(filter(lambda w: len(w) > 2 and w not in stop_words, res)))

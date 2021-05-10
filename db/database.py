@@ -5,7 +5,6 @@ from utils import tokenize
 from .btree import BTree, PersistentBTree
 from .persistence import TableFile, InvertedIndexFile, GamePersist, Uint32Persist, Uint32PairPersist, TagPersist, PublisherPersist, CommentPersist, ExpansionPersist, StringPersist
 
-
 class Database():
 
     def __init__(self):
@@ -18,7 +17,7 @@ class Database():
 
         # Base documents
         self.trees['games'] = PersistentBTree(
-            31, '.bgg/games.btree', Uint32PairPersist())
+            15, '.bgg/games.btree', Uint32PairPersist())
         self.tables['games'] = TableFile('.bgg/games.table', GamePersist())
 
         self.trees['categories'] = PersistentBTree(
@@ -111,17 +110,24 @@ class Database():
         self.make_relation('game', 'publisher', game_publisher)
 
     def make_document(self, document, data, key, hook=None):
+        print(f'Building {document}...')
+
         ids = BTree(self.trees[document].order)
         self.tables[document].delete()
+        i = 1
         for element in data:
+            print(f'Inserting {i}th item on table {document}...')
             index = self.tables[document].insert(element)
             ids.insert(element[key], index)
             if hook != None:
                 hook(element, index)
+            i += 1
         self.trees[document].dump(ids)
 
     def make_relation(self, entity_a, entity_b, relation_data, hook=None):
         rel_name = entity_a + '_' + entity_b
+
+        print(f'Building {rel_name}...')
 
         self.tables[rel_name].delete()
         self.postings[rel_name + '_' + entity_a].delete()
@@ -138,8 +144,7 @@ class Database():
         self.postings['expansions_game'].insert(expansion['game_id'], index)
 
     def games_hook(self, game, index):
-        self.build_search_index('games', 'name', game, index)
-        self.build_search_index('games', 'description', game, index)
+        self.build_search_index('games', ['description', 'name'], game, index)
 
     def mechanics_hook(self, mechanic, index):
         self.build_search_index('mechanics', 'name', mechanic, index)
@@ -160,7 +165,14 @@ class Database():
             raise Exception('Invalid comment found!')
 
     def build_search_index(self, document, key, object, index):
-        for token in tokenize(object[key]):
+        if isinstance(key, list):
+            string = ''
+            for k in key:
+                string += '\n' + object[k]
+        else:
+            string = object[key]
+
+        for token in tokenize(string):
             self.postings[document + '_word'].insert(token, index)
 
     def get_by_key(self, table, key):

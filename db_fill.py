@@ -1,21 +1,11 @@
 from game_list import game_list
 from bggapi import fetch_games, fetch_games_expansions, fetch_publisher
 from functools import reduce
-from utils import reduce_extend
+from utils import reduce_extend, unique
 from db.db import connect
 
-def unique(arr):
-    uniq = []
-
-    for i in arr:
-        if i in uniq:
-            continue
-        else:
-            uniq.append(i)
-            yield i
-
-
 def fill():
+    print('Fetching games...')
     games = fetch_games(game_list)
 
     mechanics = unique(reduce(
@@ -46,9 +36,11 @@ def fill():
         []
     ))
     publishers = []
+    print('Fetching publishers...')
     for id in publishers_id:
         publishers.append(fetch_publisher(id))
 
+    print('Fetching expansions...')
     expansions = fetch_games_expansions(games)
 
     comments = []
@@ -79,8 +71,15 @@ def fill():
         for publisher in game['publishers']:
             game_publisher.append((game['id'], publisher))
 
+    for game in games:
+        if game['id'] == 233078:
+            print(game['name'])
+            print('comments:', len(game['comments']))
+            print()
+
     db = connect()
 
+    print('Building db...')
     db.initial_data(
         games,
         mechanics,
