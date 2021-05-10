@@ -19,10 +19,10 @@ class GameSearchScreen():
         self.result_list = self.root.add_scroll_menu('Results 🕮', 2, 0, column_span=2)
 
         self.mechanics_search = self.root.add_text_box('Mechanics 🔍', 0, 1)
-        self.mechanics_result = self.root.add_checkbox_menu('Mechanics 🕮', 0, 2)
+        self.mechanics_result = self.root.add_checkbox_menu('Mechanics ⚙️', 0, 2)
 
         self.categories_search = self.root.add_text_box('Categories 🔍', 1, 2)
-        self.categories_result = self.root.add_checkbox_menu('Categories 🕮', 2, 2)
+        self.categories_result = self.root.add_checkbox_menu('Categories 📚', 2, 2)
 
         self.search_box.add_key_command(py_cui.keys.KEY_ENTER, self.search)
         self.mechanics_search.add_key_command(py_cui.keys.KEY_ENTER, self.search_mechanics)

@@ -1,6 +1,7 @@
 import py_cui
 import ui.game_search_screen as gsc
 import ui.publisher_info_screen as pis
+import ui.expansion_info_screen as eis
 from .list_item import ListItem
 from db.db import connect
 from .ui import ui_push
@@ -19,10 +20,10 @@ class GameInfoScreen:
         self.root.add_text_block('Information', 0, 0, initial_text=self.info_text())
         self.root.add_text_block('Description', 1, 0, row_span=2, column_span=2, initial_text=game['description'])
 
-        self.publishers = self.root.add_scroll_menu('Publishers', 0, 1)
-        self.expansions = self.root.add_scroll_menu('Expansions', 0, 2)
-        self.categories = self.root.add_scroll_menu('Categories', 1, 2)
-        self.mechanics = self.root.add_scroll_menu('Mechanics', 2, 2)
+        self.publishers = self.root.add_scroll_menu('Publishers 🏠', 0, 1)
+        self.expansions = self.root.add_scroll_menu('Expansions ➕', 0, 2)
+        self.categories = self.root.add_scroll_menu('Categories 📚', 1, 2)
+        self.mechanics = self.root.add_scroll_menu('Mechanics ⚙️', 2, 2)
 
         self.publishers.add_key_command(py_cui.keys.KEY_ENTER, self.select_publisher)
         self.expansions.add_key_command(py_cui.keys.KEY_ENTER, self.select_expansion)
@@ -77,8 +78,7 @@ Playtime:
         if exp == None:
             return
 
-        exp = exp.value
-
+        ui_push(self.ui, eis.ExpansionInfoScreen(self.ui, exp.value))
 
     def select_category(self):
         cat = self.categories.get()
@@ -96,7 +96,6 @@ Playtime:
 
         ui_push(self.ui, gsc.GameSearchScreen(self.ui, mechanics = [mech]))
 
-
     def select_publisher(self):
         pub = self.publishers.get()
 
@@ -104,7 +103,6 @@ Playtime:
             return
 
         ui_push(self.ui, pis.PublisherInfoScreen(self.ui, pub.value))
-
 
     def apply(self):
         self.ui.set_title(f"{self.game['name']} (#{self.id})")
