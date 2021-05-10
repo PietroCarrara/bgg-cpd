@@ -4,6 +4,7 @@ from db.db import connect
 from functools import reduce
 from utils import tokenize, reduce_intersection
 from .game_info_screen import GameInfoScreen
+from .ui import ui_push
 
 class GameSearchScreen():
 
@@ -164,8 +165,7 @@ class GameSearchScreen():
         if game == None:
             return
 
-        screen = GameInfoScreen(self.ui, game.value)
-        screen.apply()
+        ui_push(self.ui, GameInfoScreen(self.ui, game.value), f"{game.value['name']} (#{game.value['id']})")
 
     def apply(self):
         self.ui.apply_widget_set(self.root)

@@ -1,5 +1,5 @@
 import py_cui
-
+from .ui import ui_push
 from .game_search_screen import GameSearchScreen
 
 class MenuScreen:
@@ -22,4 +22,4 @@ class MenuScreen:
         option = self.menu.get_selected_item_index()
 
         if option == 0:
-            GameSearchScreen(self.ui).apply()
+            ui_push(self.ui, GameSearchScreen(self.ui), 'Search Games')

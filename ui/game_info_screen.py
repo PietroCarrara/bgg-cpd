@@ -41,6 +41,8 @@ class GameInfoScreen:
             players = f"{self.game['min_players']}"
 
         time = f"{self.game['min_playtime']} -- {self.game['max_playtime']}"
+        if self.game['min_playtime'] == self.game['max_playtime']:
+            time = self.game['min_playtime']
 
         min_age = ''
         if self.game['min_age'] != 0:
@@ -56,6 +58,36 @@ Playtime:
 
 """
 
+    def select_expansion(self):
+        exp = self.expansions.get()
+
+        if exp == None:
+            return
+
+        exp = exp.value
+
+        # TODO: Switch to expansion screen
+
+    def select_category(self):
+        cat = self.categories.get()
+
+        if cat == None:
+            return
+
+        cat = cat.value
+
+        # TODO: Switch to search screen
+
+    def select_mechanic(self):
+        mech = self.mechanics.get()
+
+        if mech == None:
+            return
+
+        mech = mech.value
+
+        # TODO: Switch to search screen
+
+
     def apply(self):
-        self.ui.set_title(f"{self.game['name']} (#{self.game['id']})")
         self.ui.apply_widget_set(self.root)
