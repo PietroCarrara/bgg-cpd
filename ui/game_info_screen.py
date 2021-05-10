@@ -18,7 +18,8 @@ class GameInfoScreen:
         db = connect()
 
         self.root.add_text_block('Information', 0, 0, initial_text=self.info_text())
-        self.root.add_text_block('Description', 1, 0, row_span=2, column_span=2, initial_text=game['description'])
+        self.root.add_text_block('Description', 1, 0, row_span=2, initial_text=game['description'])
+        self.comments = self.root.add_text_block('Comments 💬', 1, 1, row_span=2)
 
         self.publishers = self.root.add_scroll_menu('Publishers 🏠', 0, 1)
         self.expansions = self.root.add_scroll_menu('Expansions ➕', 0, 2)
@@ -48,6 +49,20 @@ class GameInfoScreen:
         for expansion in db.get_by_posting('expansions', 'game', self.id):
             item = ListItem(expansion, expansion['name'])
             self.expansions.add_item(item)
+
+        text = ''
+        total = 0
+        count = 0
+        for comment in db.get_by_posting('comments', 'game', self.id):
+            if comment['rating'] != None:
+                text += f"{comment['rating']}/10 - "
+                total += comment['rating']
+                count += 1
+
+            text += comment['text'] + '\n\n'
+        text = f'Average Rating: {total/count}\n\n{text}'
+
+        self.comments.set_text(text)
 
     def info_text(self):
         players = f"{self.game['min_players']} -- {self.game['max_players']}"
