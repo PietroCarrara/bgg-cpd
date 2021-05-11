@@ -34,7 +34,7 @@ class ExpansionInfoScreen:
                 count += 1
 
             text += comment['text'] + '\n\n'
-        text = f'Average Rating: {total/count}\n\n{text}'
+        text = f'Average Rating: {total/(count or 1)}\n\n{text}'
 
         self.comments.set_text(text)
 
