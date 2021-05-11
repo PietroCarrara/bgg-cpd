@@ -1,6 +1,7 @@
 import py_cui
 import ui.game_search_screen as gsc
 import ui.publisher_search_screen as psc
+import ui.db_fill_screen as dbfs
 from .ui import ui_push
 
 class MenuScreen:
@@ -12,6 +13,7 @@ class MenuScreen:
         self.menu.add_item_list([
             '1. Search Games',
             '2. Search Publishers',
+            '3. Fill Database'
         ])
         self.menu.add_key_command(py_cui.keys.KEY_ENTER, self.select_operation)
 
@@ -28,3 +30,13 @@ class MenuScreen:
 
         elif option == 1:
             ui_push(self.ui, psc.PublisherSearchScreen(self.ui))
+
+        elif option == 2:
+            self.ui.show_yes_no_popup('Are you sure? This will delete all the data inside the database right now. ', self.fill)
+
+    def fill(self, ok):
+        if not ok:
+            return
+
+        ui_push(self.ui, dbfs.DBFillScreen(self.ui))
+

@@ -93,52 +93,54 @@ class Database():
                      expansions,
                      game_mechanic,
                      game_category,
-                     game_publisher):
+                     game_publisher,
+                     notifier):
         # Empty some indexes first
         for p in self.postings:
             self.postings[p].delete()
         # Create the base documents
-        self.make_document('games', games, 'id', self.games_hook)
-        self.make_document('mechanics', mechanics, 'id', self.mechanics_hook)
-        self.make_document('categories', categories, 'id', self.categories_hook)
-        self.make_document('publishers', publishers, 'id', self.publishers_hook)
-        self.make_document('comments', comments, 'id', self.comments_hook)
-        self.make_document('expansions', expansions, 'id', self.expansions_hook)
+        self.make_document('games', games, 'id', notifier, self.games_hook)
+        self.make_document('mechanics', mechanics, 'id', notifier, self.mechanics_hook)
+        self.make_document('categories', categories, 'id', notifier, self.categories_hook)
+        self.make_document('publishers', publishers, 'id', notifier, self.publishers_hook)
+        self.make_document('comments', comments, 'id', notifier, self.comments_hook)
+        self.make_document('expansions', expansions, 'id', notifier, self.expansions_hook)
         # Create the N-N relations
-        self.make_relation('game', 'mechanic', game_mechanic)
-        self.make_relation('game', 'category', game_category)
-        self.make_relation('game', 'publisher', game_publisher)
+        self.make_relation('game', 'mechanic', game_mechanic, notifier)
+        self.make_relation('game', 'category', game_category, notifier)
+        self.make_relation('game', 'publisher', game_publisher, notifier)
 
-    def make_document(self, document, data, key, hook=None):
-        print(f'Building {document}...')
+    def make_document(self, document, data, key, notifier, hook=None):
+        notifier.message(f'Building {document}...')
 
         ids = BTree(self.trees[document].order)
         self.tables[document].delete()
-        i = 1
+        notifier.start_progress(len(data))
         for element in data:
-            print(f'Inserting {i}th item on table {document}...')
             index = self.tables[document].insert(element)
             ids.insert(element[key], index)
             if hook != None:
                 hook(element, index)
-            i += 1
+            notifier.progress()
         self.trees[document].dump(ids)
 
-    def make_relation(self, entity_a, entity_b, relation_data, hook=None):
+    def make_relation(self, entity_a, entity_b, relation_data, notifier, hook=None):
         rel_name = entity_a + '_' + entity_b
 
-        print(f'Building {rel_name}...')
+        notifier.message(f'Building {rel_name}...')
 
         self.tables[rel_name].delete()
         self.postings[rel_name + '_' + entity_a].delete()
         self.postings[rel_name + '_' + entity_b].delete()
 
+        notifier.start_progress(len(relation_data))
         for data_a, data_b in relation_data:
             index = self.tables[rel_name].insert((data_a, data_b))
             self.postings[rel_name + '_' + entity_a].insert(data_a, index)
             self.postings[rel_name + '_' + entity_b].insert(data_b, index)
             if hook != None:
                 hook(data_a, data_b, index)
+            notifier.progress()
 
     def expansions_hook(self, expansion, index):
         self.postings['expansions_game'].insert(expansion['game_id'], index)

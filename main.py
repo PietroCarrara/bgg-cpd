@@ -1,4 +1,3 @@
-import db_fill
 import py_cui
 from db.db import connect
 from ui.menu_screen import MenuScreen
