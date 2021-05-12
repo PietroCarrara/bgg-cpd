@@ -1,9 +1,21 @@
-\documentclass[hidelinks,article,twocolumn,brazil]{abntex2}
+\documentclass[hidelinks,12pt,article,twocolumn,brazil]{abntex2}
 
 \usepackage{indentfirst}
+\usepackage{graphicx}
 \usepackage[utf8]{inputenc}
 \usepackage[T1]{fontenc}
 \usepackage[alf]{abntex2cite}
+\usepackage[table,xcdraw]{xcolor}
+
+\newcommand{\imagem}[3]{\begin{figure}[htb]
+    \begin{center}
+        \includegraphics[width=0.49\textwidth]{#1}\\
+        \caption{#2}
+        \label{#3}
+    \end{center}
+\end{figure}}
+
+\newcommand{\mono}[1]{\texttt{#1}}
 
 \def\bgg{\textit{boardgamegeek.com}}
 
@@ -22,15 +34,15 @@
 
 \subsection{Apresentação}
 
-Jogos de tabuleiro são um importante elemento da cultura humana, tendo sido desenvolvidos e jogados na maior parte das sociedades ao longo do tempo \cite{livingstone2019board}. Com o advento da produção em massa e de mercados cada vez mais abrangentes, a produção de jogos de tabuleiro vem crescendo em ritmo acelerado \cite{quinns2012youtube}.
+Jogos de tabuleiro são um importante elemento da cultura humana, tendo sido desenvolvidos e jogados na maior parte das sociedades ao longo do tempo \cite{livingstone2019board}. Com o advento da produção em massa e de mercados cada vez mais abrangentes, a produção de jogos de tabuleiro vem crescendo em ritmo acelerado \cite{quinns2017youtube}.
 
-O grande número de jogos feitos por essa indústria em ascenção leva a necessidade de se catalogar e organizar essa produção, a fim de possibilitar a navegação deste grande contingente. Este trabalho propõe uma ferramenta que realiza esta catalogação, e auxilia na busca por jogos através dos seguintes objetivos:
+O grande número de jogos feitos por essa indústria em ascenção leva a necessidade de se catalogar e organizar essa produção, a fim de possibilitar a navegação deste crescente contingente. Este trabalho propõe uma ferramenta que realiza esta catalogação, e auxilia na busca por jogos ao cumprir os seguintes objetivos:
 \begin{itemize}
-    \item Categorização e busca de jogos por gênero (estratégia, cartas, \ldots)
-    \item Classificação e pesquisa de jogos por mecânicas (rolagem de dados, tabuleiro modular, \ldots)
-    \item Ordenamento dos resultados em ordem decrescente da avaliação da comunidade
-    \item Classificação das editoras que publicam os jogos, possibilitando a busca de empresas que operem próximas ao usuário
-    \item Cadastro da avaliação do usuário dos jogos inseridos no sistema, possibilitando o feedback da comunidade sobre jogos que gostaram ou não
+    \item Categorizar e buscar jogos por gênero (estratégia, cartas, \ldots)
+    \item Classificar e pesquisar jogos por mecânicas (rolagem de dados, tabuleiro modular, \ldots)
+    \item Selecionar os resultados em ordem decrescente da avaliação da comunidade, mostrando primeiro jogos bem avaliados
+    \item Classificar editoras que publicam os jogos, possibilitando a busca de empresas que operem próximas ao usuário
+    \item Cadastrar avaliações do usuário sobre os jogos inseridos no sistema, habilitando o feedback da comunidade sobre jogos que gostaram ou não
 \end{itemize}
 
 \subsection{Conjunto de Dados Selecionados}
@@ -39,21 +51,115 @@ Os dados sobre jogos estão disponíveis em \bgg, e a ferramenta desenvolvida os
 
 Conhecido como ``a central para jogos de tabuleiro na internet'' \cite{draper2019bgg}, o site reúne usuários que formam uma comunidade ``onde seus membros são amplamente representativos do tipo de jogador com um forte interesse em jogos de tabuleiro'' \cite{woods2012eurogames}.
 
-Dos dados disponíveis no site, a ferramenta desenvolvida extrai os jogos, assim como suas mecânicas, categorias, editoras, expansões e avaliações da comunidade.
+Dos dados disponíveis no site, a ferramenta desenvolvida extrai os jogos, assim como suas mecânicas, categorias, editoras\footnote{A API disponibiliza vários dados, mas não editoras; para obter as informações necessárias usou-se a biblioteca \href{https://www.crummy.com/software/BeautifulSoup/}{BeautifulSoup}, que intepreta a própria interface HTML do site.}, expansões e avaliações da comunidade.
 
 \section{Implementação}
 
-\subsection{Estrutura do Código}
+\subsection{Diagrama Entidade--Relacionamento}
+
+Ao criar uma abstração para representar os dados utilizados pela ferramenta, escolheu-se o modelo Entidade--Relacionamento, que descreve dados em termos de entidades, suas informações e como se relacionam umas com as outras \cite{chen1976entity}.
+
+\imagem{img/ER-CPD.png}{Diagrama entidade--relacionamento modelando o conjunto de dados}{diagrama_er}
+
+Para a conversão do modelo abstrato mostrado na figura \ref{diagrama_er} em uma série de arquivos relacionais, as informações foram transformadas para a 3ª forma normal -- que tem como objetivo ``possibilitar a pesquisa eficiente através de uma coleção mais simples de operações relacionais'' \cite{codd1971normalized} -- através do seguinte procedimento:
+
+\begin{enumerate}
+    \item Transformar cada entidade em uma tabela
+    \item As relações 1--N se transformam em um atributo da entidade de cardinalidade N, e aponta para a entidade de cardinalidade 1
+    \item As relações N--N se transformam em suas próprias tabelas, onde cada tupla armazena os identificadores das tabelas envolvidas na relação
+\end{enumerate}
 
 \subsection{Estruturas de Dados}
 
-\subsection{Arquivos Utilizados}
+Para armazenamento dos dados em disco, foram utilizadas estruturas de dados mais adequadas a este meio de armazenamento.
+
+\subsubsection{Tabelas e Índices}
+\label{estrut_tabelas}
+
+As tabelas são armazenadas em arquivos sequenciais, sem critério de ordem. Apesar disso, seu acesso é \textit{randômico}, significando que pode-se acessar rápidamente qualquer elemento, contanto que se conheça sua localização. Para a busca rápida baseada no identificador de uma entidade, seus índices são armazenados em BTrees: árvores auto-balanceáveis mais adequadas para armazenamento em memória secundária, já que conseguem localizar dados com poucos \textit{disk reads} \cite{knuth1973art}.
+
+\subsection{Índices Reversos}
+\label{estrut_indices}
+
+Para rápida localização de elementos baseado no valor de seus atributos, foram implementados índices reversos. Essa estrutura está dividida em duas partes: um arquivo de dicionário e um arquivo de postings.
+
+A estrutura de postings armazena várias listas em blocos contendo índices que apontam para uma tabela. Pelo fato de ser uma lista em blocos, é mais adequada ao armazenamento em disco, já que este meio dá vantagem à leitura em blocos.
+
+O dicionário é chaveado pelos valores de alguma propriedade de uma tabela, e armazena um ``ponteiro'' para a lista no arquivo de postings que cotém os índices de todas as entradas que possuem aquele dado valor em sua propriedade.
+
+\subsection{Estrutura do Código}
+
+Nenhuma das estruturas mencionadas nas seções \ref{estrut_tabelas} e \ref{estrut_indices} assume que tipo de dado irão armazenar. Esta função é delegada ao objeto chamado de \texttt{persist}. É o \texttt{persist} que sabe como codificar um jogo, expansão, comentário, etc\ldots para bytes, e de bytes de volta para seu tipo original. Isso possibilita a alta reutilização de código das estruturas.
+
+Todas essas estruturas são gerenciadas pela classe \texttt{Database}, que abstrai seu uso para métodos mais simples, como \texttt{get\_by\_id} ou \texttt{get\_by\_posting}.
+
+Para a exibição dos dados e interação com o usuário, foi contruída uma interface textual para o \textit{console}, utilizando a biblioteca \href{https://github.com/jwlodek/py_cui}{\texttt{py\_cui}}.
+
+Para possibilitar a busca textual de editoras , jogos, categorias e mecânicas, seus nomes e descrições foram \textit{tokenizados} e indexados utilizando índices reversos.
+
+\subsection{Arquivos De Armazenamento}
+
+Ao total, a base utiliza 41 arquivos, cada um nomes, extensões, informações e estruturas conforme descritas a seguir:
+
+\begin{itemize}
+    \item \textbf{Tabelas Sequenciais (.table)}: \mono{categories}, armazenando categorias; \mono{comments}, armazenando comentários; \mono{expansions}, armazenando expansões; \mono{game\_category}, armazenando tuplas de (jogo, categoria); \mono{game\_mechanic}, armazenando tuplas de (jogo, mecânica); \mono{game\_publisher}, armazenando tuplas de (jogo, editora); \mono{games}, armazenando jogos; \mono{mechanics}, armazenando mecânicas; \mono{publishers}, armazenando editoras.
+
+    \item \textbf{Índices em BTrees (.btree)}: \mono{categories} indexando categorias; \mono{comments} indexando comentários; \mono{expansions} indexando expansões; \mono{games} indexando jogos; \mono{mechanics} indexando mecânicas; \mono{publishers} indexando editoras.
+
+    \item \textbf{Índices Reversos (.dictionary e .posting)}: \mono{categories\_word} indexando textualmente categorias; \mono{comments\_expansion} indexando comentários que comentam uma dada expansão; \mono{comments\_game} indexando comentários que comentam um dado jogo; \mono{expansions\_game} expansões que expandem um dado jogo; \mono{game\_category\_category} indexando a relação entre jogos e categorias, chaveado por categoria; \mono{game\_category\_game} indexando a relação entre jogos e categorias, chaveado por jogo; \mono{game\_mechanic\_game} indexando a relação entre jogos e mecânicas chaveado por jogo; \mono{game\_mechanic\_mechanic} indexando a relação entre jogos e mecânicas, chaveado por mecânica; \mono{game\_publisher\_game} indexando a relação entre jogos e editoras, chaveado por jogo; \mono{game\_publisher\_publisher} indexando a relação entre jogos e editoras, chaveado por editora; \mono{games\_word} indexando textualmente jogos; \mono{mechanics\_word} indexando textualmente mecânicas; \mono{publishers\_word} indexando textualmente editoras.
+\end{itemize}
 
 \subsection{Algoritmos Desenvolvidos e Seus Usos}
 
 \section{Guia de Uso}
 
+Ao iniciar o programa, rodando o comando \texttt{\$ python main.py}, o usuário se encontra na tela inicial (figura \ref{scr_init}). O foco pode ser movido com as setas do teclado. Esta tela apresenta 3 opções: Busca de jogos, busca de editoras e preencher a base de dados.
+
+\imagem{img/scr_init.png}{Tela Inicial}{scr_init}
+
+Caso o usuário selecione a 3ª opção, um \textit{pop-up} será exibido (figura \ref{scr_fill}), informando o progresso do programa conforme preenche a base de dados com informações extraídas de \bgg.
+
+\imagem{img/scr_fill}{Tela de Preenchimento da Base de Dados}{scr_fill}
+
+Caso o usuário selecione a opção de busca de jogos, será levado à tela vista na figura \ref{scr_search}. Aqui é possível buscar mecânicas/categorias e selecioná-las para que sejam exibidos somente jogos que usem essas mecânicas e sejam dessas categorias. É também possível informar um texto, para que sejam selecionados jogos onde as palavras informadas apareçam em sua descrição ou título.
+
+\imagem{img/scr_search.png}{Tela de Busca de Jogos}{scr_search}
+
+Ao selecionar um jogo da tela de busca, o usuário é levado para a tela do jogo (figura \ref{scr_game}). Aqui é possível ver as informações do jogo: Número de jogadores, tempo de jogo, suas expanções, comentários, categorias, mecânicas, etc\ldots Caso o usuário selecione alguma categoria ou mecânica, será levado novamente para a tela de busca, mas exibindo jogos daquela mecânica/gênero. Caso o usuário selecione uma das editoras que publicam o jogo, ele será levado para a tela da editora (figura \ref{scr_publisher}).
+
+\imagem{img/scr_game.png}{Tela do Jogo \textit{Galaxy Trucker}}{scr_game}
+
+Na tela de expansão, podemos ver as informações da expansão, como seu nome, descrição e comentários. Para voltar à tela anterior, o usuário pode pressionar a tecla \texttt{ESC} para sair do foco de qualquer widget, e \texttt{Q} para sair da tela atual. Caso faça isto na tela inicial, o programa é encerrado.
+
+\imagem{img/scr_expansion.png}{Tela da expansão \textit{The Pillbug} para o jogo \textit{Hive}}{scr_scr_expansion}
+
+Se, a partir da tela inicial, o usuário selecionar a busca de editoras, será levado para a tela mostrada na figura \ref{scr_searchpub}. Aqui é possível informar um texto para a busca, que tentará encontrar editoras que contenham o texto em seu título ou descrição.
+
+\imagem{img/scr_searchpub.png}{Tela de Busca de Editoras}{scr_searchpub}
+
+Ao selecionar uma editora, o usuário é levado à tela da editora (figura \ref{scr_publisher}), onde é possível consultar seu nome, descrição e jogos publicados.
+
+\imagem{img/scr_publisher.png}{Tela da Editora ``Galápagos Jogos''}{scr_publisher}
+
 \section{Contribuição}
+
+Para analisar a contribuição deste trabalho para com a literatura, elaborou-se uma tabela com quesitos comparando a ferramenta aqui proposta com a maior referência na área, {\bgg} (BGG).
+
+\begin{table}[htb]
+    \rowcolors{1}{gray!15}{gray!5}
+    \centering
+    \begin{tabular}{ccc}
+        Quesito                                                                     & \begin{tabular}[c]{@{}c@{}}Ferramenta\\ Proposta\end{tabular} & BGG                         \\
+        \begin{tabular}[c]{@{}c@{}}Possui\\ busca\\ avançada\end{tabular}           & \cellcolor[HTML]{9AFF99}Sim                                   & \cellcolor[HTML]{9AFF99}Sim \\
+        \begin{tabular}[c]{@{}c@{}}Indexa\\ jogos\\ e suas\\ expansões\end{tabular} & \cellcolor[HTML]{9AFF99}Sim                                   & \cellcolor[HTML]{9AFF99}Sim \\
+        \begin{tabular}[c]{@{}c@{}}Interface\\ acessível\end{tabular}               & \cellcolor[HTML]{FD6864}Não                                   & \cellcolor[HTML]{9AFF99}Sim \\
+        \begin{tabular}[c]{@{}c@{}}Disponivel\\ offline\end{tabular}                & \cellcolor[HTML]{9AFF99}Sim                                   & \cellcolor[HTML]{FD6864}Não
+    \end{tabular}
+    \caption{Comparação entre funcionalidades das ferramentas}
+    \label{tab_comp_func}
+\end{table}
+
+Como pode-se ver na tabela \ref{tab_comp_func}, ambas as ferramentas apresentam buscas avançadas, assim como indexam não apenas jogos, mas suas expansões. Percebe-se também que a ferramenta proposta apresenta uma interface menos amigável do que \bgg. Apesar disso, pelo fato de que {\bgg} é um sistema web, o usuário precisa ter uma conexão com a internet para fazer uso desse, enquanto que a ferramenta proposta precisa de internet apenas durante a carga de dados.
 
 \bibliography{report}
 
