@@ -1,26 +1,45 @@
-\documentclass[twocolumn]{article}
+\documentclass[hidelinks,article,twocolumn,brazil]{abntex2}
 
-\usepackage[brazil]{babel}
 \usepackage{indentfirst}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[alf]{abntex2cite}
 
-\author{Pietro Benati Carrara}
-\title{Implementação de Estruturas de Dados e Algoritmos Para Armazenamento e Recuperação de Informações de Jogos de Tabuleiro}
+\def\bgg{\textit{boardgamegeek.com}}
+
+\data{\today}
+\autor{Pietro Benati Carrara}
+\instituicao{Universidade Federal do Rio Grande do Sul}
+\local{Porto Alegre}
+
+\titulo{Implementação de Estruturas de Dados e Algoritmos Para Armazenamento e Recuperação de Informações de Jogos de Tabuleiro}
 
 \begin{document}
 
-\maketitle
+\imprimircapa
 
 \section{Visão Geral}
 
 \subsection{Apresentação}
 
-\subsection{Explicação}
+Jogos de tabuleiro são um importante elemento da cultura humana, tendo sido desenvolvidos e jogados na maior parte das sociedades ao longo do tempo \cite{livingstone2019board}. Com o advento da produção em massa e de mercados cada vez mais abrangentes, a produção de jogos de tabuleiro vem crescendo em ritmo acelerado \cite{quinns2012youtube}.
 
-\subsection{Justificativa}
-
-\subsection{Importância}
+O grande número de jogos feitos por essa indústria em ascenção leva a necessidade de se catalogar e organizar essa produção, a fim de possibilitar a navegação deste grande contingente. Este trabalho propõe uma ferramenta que realiza esta catalogação, e auxilia na busca por jogos através dos seguintes objetivos:
+\begin{itemize}
+    \item Categorização e busca de jogos por gênero (estratégia, cartas, \ldots)
+    \item Classificação e pesquisa de jogos por mecânicas (rolagem de dados, tabuleiro modular, \ldots)
+    \item Ordenamento dos resultados em ordem decrescente da avaliação da comunidade
+    \item Classificação das editoras que publicam os jogos, possibilitando a busca de empresas que operem próximas ao usuário
+    \item Cadastro da avaliação do usuário dos jogos inseridos no sistema, possibilitando o feedback da comunidade sobre jogos que gostaram ou não
+\end{itemize}
 
 \subsection{Conjunto de Dados Selecionados}
+
+Os dados sobre jogos estão disponíveis em \bgg, e a ferramenta desenvolvida os extrai a partir de sua API pública. O site foi fundado em 2000 por Scott Alden \cite{woods2012eurogames}, e agrega informações sobre jogos, suas editoras e avaliações dos usuários.
+
+Conhecido como ``a central para jogos de tabuleiro na internet'' \cite{draper2019bgg}, o site reúne usuários que formam uma comunidade ``onde seus membros são amplamente representativos do tipo de jogador com um forte interesse em jogos de tabuleiro'' \cite{woods2012eurogames}.
+
+Dos dados disponíveis no site, a ferramenta desenvolvida extrai os jogos, assim como suas mecânicas, categorias, editoras, expansões e avaliações da comunidade.
 
 \section{Implementação}
 
@@ -35,5 +54,7 @@
 \section{Guia de Uso}
 
 \section{Contribuição}
+
+\bibliography{report}
 
 \end{document}

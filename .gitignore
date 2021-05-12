@@ -5,3 +5,15 @@
 .bgg/*
 # Cache
 .cache/*
+
+# Latex
+**.aux
+**.bbl
+**.bcf
+**.blg
+**.fdb_latexmk
+**.fls
+**.log
+**.xml
+**.gz
+**.pdf
