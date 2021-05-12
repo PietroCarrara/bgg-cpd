@@ -3,7 +3,7 @@ import ui.game_info_screen as gis
 from .list_item import ListItem
 from db.db import connect
 from functools import reduce
-from utils import tokenize, intersect, reduce_intersection
+from utils import tokenize, intersect, reduce_intersection, game_rating
 from .ui import ui_push
 
 class GameSearchScreen():
@@ -11,12 +11,14 @@ class GameSearchScreen():
     def __init__(self, ui: py_cui.PyCUI, mechanics = None, categories = None):
         self.categories = categories or []
         self.mechanics = mechanics or []
+        self.reversed = False
 
         self.ui = ui
         self.root = ui.create_new_widget_set(3, 3)
 
         self.search_box = self.root.add_text_box('Search 🔍', 0, 0)
         self.result_list = self.root.add_scroll_menu('Results 🕮', 2, 0, column_span=2)
+        self.result_list.set_help_text('Press "r" to reverse the order')
 
         self.mechanics_search = self.root.add_text_box('Mechanics 🔍', 0, 1)
         self.mechanics_result = self.root.add_checkbox_menu('Mechanics ⚙️', 0, 2)
@@ -32,6 +34,7 @@ class GameSearchScreen():
         self.mechanics_result.add_key_command(py_cui.keys.KEY_ENTER, self.select_mechanic)
 
         self.result_list.add_key_command(py_cui.keys.KEY_ENTER, self.select_result)
+        self.result_list.add_key_command(py_cui.keys.KEY_R_LOWER, self.reverse)
 
         self.current_filter = self.root.add_block_label('Current Filters 📝', 1, 0, column_span=2, center=False)
 
@@ -101,22 +104,38 @@ class GameSearchScreen():
             self.result_list.add_item('No items found!')
             return
 
-        self.ui.move_focus(self.result_list)
+        games = []
         for game_id in ids:
             game = db.get_by_key('games', game_id)
+            games.append((game, game_rating(game, db)))
 
-            item = ListItem(game, game['name'])
+        # Sort by rating or reverse rating (greater first, so we negate reversed)
+        games = sorted(games, key=lambda x: x[1], reverse=not self.reversed)
+
+        for game, rating in games:
+            item = ListItem(game, f"({rating:.1f}) - {game['name']}")
             self.result_list.add_item(item)
+
+        self.ui.move_focus(self.result_list)
+
+    def reverse(self):
+        self.reversed = not self.reversed
+        self.search()
 
     def search_mechanics(self):
         db = connect()
 
         self.mechanics_result.clear()
-        for mechanic in db.get_by_posting('mechanics', 'word', self.mechanics_search.get()):
-            item = ListItem(mechanic['id'], mechanic['name'])
-            self.mechanics_result.add_item(item)
-            if is_in(self.mechanics, item):
-                self.mechanics_result.mark_item_as_checked(item)
+
+        ids = []
+        for token in tokenize(self.mechanics_search.get()):
+            for mechanic in db.get_by_posting('mechanics', 'word', token):
+                if mechanic['id'] not in ids:
+                    ids.append(mechanic['id'])
+                    item = ListItem(mechanic['id'], mechanic['name'])
+                    self.mechanics_result.add_item(item)
+                    if is_in(self.mechanics, item):
+                        self.mechanics_result.mark_item_as_checked(item)
 
         if len(self.mechanics_result.get_item_list()) > 0:
             self.ui.move_focus(self.mechanics_result)
@@ -125,11 +144,16 @@ class GameSearchScreen():
         db = connect()
 
         self.categories_result.clear()
-        for category in db.get_by_posting('categories', 'word', self.categories_search.get()):
-            item = ListItem(category['id'], category['name'])
-            self.categories_result.add_item(item)
-            if is_in(self.categories, item):
-                self.categories_result.mark_item_as_checked(item)
+
+        ids = []
+        for token in tokenize(self.categories_search.get()):
+            for category in db.get_by_posting('categories', 'word', token):
+                if category['id'] not in ids:
+                    ids.append(category['id'])
+                    item = ListItem(category['id'], category['name'])
+                    self.categories_result.add_item(item)
+                    if is_in(self.categories, item):
+                        self.categories_result.mark_item_as_checked(item)
 
         if len(self.categories_result.get_item_list()) > 0:
             self.ui.move_focus(self.categories_result)

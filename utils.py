@@ -3,6 +3,20 @@ import re
 from stop_words import stop_words
 from functools import reduce
 
+def game_rating(game, db):
+    total = 0
+    count = 0
+
+    for comment in db.get_by_posting('comments', 'game', game['id']):
+        if comment['rating'] != None:
+            total += comment['rating']
+            count += 1
+
+    if count == 0:
+        return 0
+
+    return total/count
+
 def unique(arr):
     uniq = []
 
