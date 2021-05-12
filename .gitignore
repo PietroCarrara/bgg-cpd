@@ -2,7 +2,10 @@
 *.pyc
 
 # database
-.bgg/*
+*.table
+*.btree
+*.dictionary
+*.posting
 # Cache
 .cache/*
 
