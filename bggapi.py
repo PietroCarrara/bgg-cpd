@@ -20,7 +20,7 @@ def fetch_games(all_ids):
     comments_per_page = 100
 
     # Per game comment limit
-    comment_limit = 200
+    comment_limit = 500
 
     for ids in split(all_ids, batch_size):
         page = 1
@@ -155,7 +155,7 @@ def fetch_games_expansions(games):
     comments_per_page = 100
 
     # Per game comment limit
-    comment_limit = 200
+    comment_limit = 500
 
     for exps in split(expansions, batch_len):
         page = 1
