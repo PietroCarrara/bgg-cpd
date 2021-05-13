@@ -17,7 +17,7 @@ After you've installed the dependencies, just fire up a terminal and run `python
 
 ## Cache (Optional, Recommended)
 
-Even though you could just run the code and fill the database, BoardGameGeek's API is very, very, very slow. It rate-limits us pretty hard. This is why I recommend downloading the latest [release](https://github.com/PietroCarrara/bgg-cpd/releases/latest) (about 300MB), which comes with a filled cache. This has nothing to do with the actual database implementation, it just affects the data fetching module: If it verifies that a cache file is available for a specific URL, it will just read the file instead of making an actual request (pretty handy during development).
+Even though you could just run the code and fill the database, BoardGameGeek's API is very, very, very slow. It rate-limits us pretty hard. This is why I recommend downloading the latest [release](https://github.com/PietroCarrara/bgg-cpd/releases/latest) (about 100MB), which comes with a filled cache. This has nothing to do with the actual database implementation, it just affects the data fetching module: If it verifies that a cache file is available for a specific URL, it will just read the file instead of making an actual request (pretty handy during development).
 
 ## Configuration (Optional)
 
